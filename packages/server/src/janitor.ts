@@ -128,7 +128,7 @@ const drainViewsOnce = async (): Promise<void> => {
     await redis.xack(VIEWS_STREAM_KEY, GROUP_NAME, ...ids);
 
     consecutiveErrors = 0;
-    console.log(`[views-consumer] inserted ${rowCount} views`);
+    // console.log(`[views-consumer] inserted ${rowCount} views`);
   } catch (err: any) {
     consecutiveErrors++;
     const delay = Math.min(1000 * 2 ** consecutiveErrors, 30_000);
@@ -182,7 +182,7 @@ const runDrainLoop = async () => {
     await drainViewsOnce();
 
     // We can sleep here to reduce the CPU load of this process when receiving lots of views.
-    // await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 };
 

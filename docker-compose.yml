@@ -13,6 +13,14 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   app:
     build: .
     image: weer
@@ -21,6 +29,8 @@ services:
       - "2080:2080"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     env_file:
       - ./packages/server/.env
@@ -33,8 +43,36 @@ services:
       - DB_USER=weer
       - DB_PASSWORD=weer
       - DB_DATABASE=weer
+      - REDIS=true
+      - REDIS_URL=redis://redis:6379
     volumes:
       - app_logs:/app/packages/server/logs
+
+  janitor:
+    build: .
+    image: weer
+    entrypoint: [ "node", "dist/janitor.js" ]
+    working_dir: /app/packages/server
+    restart: on-failure
+    profiles: [ "node" ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_started
+    env_file:
+      - ./packages/server/.env
+    environment:
+      - DOCKER=true
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=weer
+      - DB_PASSWORD=weer
+      - DB_DATABASE=weer
+      - REDIS=true
+      - REDIS_URL=redis://redis:6379
 
 volumes:
   postgres_data:

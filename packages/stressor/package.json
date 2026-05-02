@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "classic-rw": "node src/classic-rw.mjs --url http://localhost:2080 --connections 5 --sessions 500 --duration 10 write-ratio 20 --output codes.txt",
-    "classic-r": "node src/classic-rw.mjs --url http://localhost:2080 --connections 5 --sessions 500 --duration 820 write-ratio 0 --output codes.txt"
+    "classic-w": "node src/classic-rw.mjs --url http://localhost:2080 --connections 5 --sessions 500 --duration 10 write-ratio 100 --output codes.txt",
+    "classic-r": "node src/classic-rw.mjs --url http://localhost:2080 --connections 5 --sessions 500 --duration 10 write-ratio 0 --output codes.txt"
   },
   "dependencies": {
     "autocannon": "^8.0.0"
