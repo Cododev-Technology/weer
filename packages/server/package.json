@@ -25,6 +25,7 @@
     "cpeak": "^2.4.1",
     "express-session": "^1.18.2",
     "helmet": "^8.1.0",
+    "ioredis": "^5.10.1",
     "passport": "0.4.0",
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.16.3",

@@ -16,6 +16,7 @@ import type {
   IView,
 } from "../database/types.js";
 import util from "../lib/util.js";
+import { push as pushView } from "../redis/views-stream.js";
 import keys from "../config/keys.js";
 import {
   generateClassic,
@@ -478,8 +479,7 @@ const redirect = async (req: Request, res: Response, handleErr: HandleErr) => {
     .update(fingerprintSource)
     .digest("hex");
 
-  // Save the view with the hash
-  await DB.insert<IView>("views", {
+  const viewData = {
     url_id: url.id,
 
     // For now, due to legal reasons, we won't save the ip address until we have a proper privacy policy in place.
@@ -490,7 +490,16 @@ const redirect = async (req: Request, res: Response, handleErr: HandleErr) => {
     link_type: processedCode.type !== "qr" ? url.link_type : undefined,
     via_qr: processedCode.type === "qr" ? true : false,
     visitor_hash: visitorHash,
-  });
+  };
+
+  if (keys.redisEnabled) {
+    // Save the view with the hash to redis stream. The janitor will drain the stream every second and save to database in batches.
+    // This is to handle high traffic and avoid database overload during peak times.
+    pushView(viewData);
+  } else {
+    // We have this in case we want to run the server without Redis, but it should not be the default in production because it can cause performance issues.
+    await DB.insert<IView>("views", viewData);
+  }
 
   res.redirect(url.real_url);
 };

@@ -17,4 +17,7 @@ export default {
   dbDatabase: getEnv("DB_DATABASE"),
   dbPassword: getEnv("DB_PASSWORD"),
   dbPort: Number(getEnv("DB_PORT")),
+  // Redis
+  redisUrl: getEnv("REDIS_URL"),
+  redisEnabled: getEnv("REDIS") === "true",
 };

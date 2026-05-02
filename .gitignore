@@ -4,6 +4,7 @@ dev.ts
 
 packages/stressor/codes.txt
 
+temp
 node_modules
 .DS_Store
 .env

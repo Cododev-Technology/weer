@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import keys from "../config/keys.js";
 import { LINKS } from "../lib/link-definitions.js";
+import { redis } from "../redis/redis.js";
 
 // Create the database if it doesn't exist
 async function createDatabase() {
@@ -24,7 +25,7 @@ async function createDatabase() {
     `
     SELECT 1 FROM pg_database WHERE datname = $1
   `,
-    [keys.dbDatabase],
+    [keys.dbDatabase]
   );
 
   if (result.rowCount === 0) {
@@ -151,7 +152,7 @@ const databasePath = new URL("./", import.meta.url).pathname;
     SELECT substr($1, g, 1)
     FROM generate_series(1, length($1)) AS g;
   `,
-    [letters],
+    [letters]
   );
 
   // Insert all 2-character codes
@@ -162,7 +163,7 @@ const databasePath = new URL("./", import.meta.url).pathname;
     FROM generate_series(1, length($1)) AS g1,
          generate_series(1, length($1)) AS g2;
   `,
-    [letters],
+    [letters]
   );
 
   console.log(
@@ -170,9 +171,37 @@ const databasePath = new URL("./", import.meta.url).pathname;
       (await pool.query("SELECT COUNT(*) FROM ultra_codes")).rows[0].count
     } records (${letters.length} one-character & ${
       letters.length * letters.length
-    } two-character ultra codes) were added to the database.`,
+    } two-character ultra codes) were added to the database.`
   );
 })();
+
+// Now flush redis to clear any existing data in case the same database is being reused
+redis
+  .flushdb()
+  .then(() => {
+    console.log("\n[redis] flushed the database.");
+    // end redis connection after flushing
+    redis.quit();
+  })
+  .catch((err: Error) => {
+    console.error("[redis] failed to flush the database:", err.message);
+  });
+
+// Delete packages/stressor/codes.txt
+const stressorCodesPath = path.join(
+  databasePath,
+  "../../../stressor/codes.txt"
+);
+fs.unlink(stressorCodesPath, (err) => {
+  if (err && err.code !== "ENOENT") {
+    console.error(
+      "[stressor] failed to delete codes.txt. Please delete it manually.",
+      err
+    );
+  } else {
+    console.log("\n[stressor] deleted codes.txt.");
+  }
+});
 
 // -----------------------
 //     ADDING USERS
