@@ -175,17 +175,20 @@ const databasePath = new URL("./", import.meta.url).pathname;
   );
 })();
 
-// Now flush redis to clear any existing data in case the same database is being reused
-redis
-  .flushdb()
-  .then(() => {
-    console.log("\n[redis] flushed the database.");
-    // end redis connection after flushing
-    redis.quit();
-  })
-  .catch((err: Error) => {
-    console.error("[redis] failed to flush the database:", err.message);
-  });
+// Now flush redis to clear any existing data in case the same database is being reused.
+// Only do this if Redis is enabled.
+if (keys.redisEnabled) {
+  redis
+    .flushdb()
+    .then(() => {
+      console.log("\n[redis] flushed the database.");
+      // end redis connection after flushing
+      redis.quit();
+    })
+    .catch((err: Error) => {
+      console.error("[redis] failed to flush the database:", err.message);
+    });
+}
 
 // Delete packages/stressor/codes.txt
 const stressorCodesPath = path.join(

@@ -6,6 +6,7 @@
 import { DB, pool } from "./database/index.js";
 import { redis } from "./redis/redis.js";
 import { VIEWS_STREAM_KEY } from "./redis/views-stream.js";
+import keys from "./config/keys.js";
 
 // Set node process name to node-janitor for easier identification in logs and process managers
 process.title = "node-janitor";
@@ -187,8 +188,10 @@ const runDrainLoop = async () => {
 
 process.on("SIGTERM", async () => {
   await pool.end();
-  await redis.quit();
+  if (keys.redisEnabled) await redis.quit();
   process.exit(0);
 });
 
-runDrainLoop();
+if (keys.redisEnabled) {
+  runDrainLoop();
+}
