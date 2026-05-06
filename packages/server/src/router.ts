@@ -5,7 +5,7 @@ import type {
   HandleErr,
 } from "cpeak";
 
-import passport from "passport";
+import { buildAuthUrl } from "./lib/google-oauth.js";
 import middlewares from "./middlewares.js";
 import Auth from "./controllers/auth.js";
 import User from "./controllers/user.js";
@@ -16,21 +16,11 @@ import Url from "./controllers/url.js";
 // ------------------------------------------------ //
 
 export default (app: Cpeak) => {
-  app.route(
-    "get",
-    "/auth/google",
-    passport.authenticate("google", {
-      scope: ["profile", "email"],
-    }),
-    (req: Request, res: Response) => {}
-  );
+  app.route("get", "/auth/google", (req: Request, res: Response) => {
+    res.redirect(buildAuthUrl());
+  });
 
-  app.route(
-    "get",
-    "/auth/google/callback",
-    passport.authenticate("google"),
-    Auth.login
-  );
+  app.route("get", "/auth/google/callback", Auth.handleOAuthCallback);
 
   app.route("get", "/logout", Auth.logOut);
 

@@ -50,7 +50,7 @@ async function checkUrlOwnership(
   next: Next,
   handleErr: HandleErr
 ) {
-  const urlId = Number(req.vars?.id);
+  const urlId = Number(req.params?.id);
 
   if (!urlId) {
     return handleErr({ status: 400, message: "Invalid URL ID." });
@@ -64,7 +64,7 @@ async function checkUrlOwnership(
   if (!req.user) {
     const session = await DB.find<ISession>(
       `SELECT id FROM sessions WHERE session_token=$1`,
-      [req.session?.session_token]
+      [req.signedCookies?.session_token || null]
     );
 
     if (url && url.session_id === session?.id) {

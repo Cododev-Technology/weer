@@ -57,10 +57,10 @@ const getUrls = async (req: Request, res: Response) => {
   if (req.user) {
     whereClause = "urls.user_id = $1";
     queryParams = [req.user.id];
-  } else if (req.session?.session_token) {
+  } else if (req.signedCookies?.session_token) {
     const session = await DB.find<ISession>(
       "SELECT id FROM sessions WHERE session_token=$1",
-      [req.session.session_token]
+      [req.signedCookies.session_token]
     );
 
     if (!session?.id) {
@@ -120,7 +120,7 @@ const shorten = async (
   let userId = req.user ? req.user.id : null;
 
   // Get the session token for when the user is not logged in
-  let sessionToken = req.session?.session_token;
+  let sessionToken = req.signedCookies?.session_token || null;
 
   const realUrl = req.body?.url;
 
@@ -216,7 +216,7 @@ const changeUrlType = async (
   res: Response,
   handleError: HandleErr
 ) => {
-  const id = Number(req.vars?.id);
+  const id = Number(req.params?.id);
   const newType = req.body?.type as LinkType;
 
   if (!id || !newType) {
@@ -375,13 +375,13 @@ const changeUrlType = async (
 /** @TODO FIX ERROR RETURN IN CPEAK SEND FILE */
 // Redirect to the real url
 const redirect = async (req: Request, res: Response, handleErr: HandleErr) => {
-  const code = req.vars?.id;
+  const code = req.params?.id;
 
   if (!code) {
     return handleErr(new Error("No URL ID provided"));
   }
 
-  const processedCode = processCode(code, req.vars?.username, req.url);
+  const processedCode = processCode(code, req.params?.username, req.url);
 
   if (!processedCode) {
     return res.sendFile(path.join(publicPath, "./no-url.html"), "text/html");
@@ -422,7 +422,7 @@ const redirect = async (req: Request, res: Response, handleErr: HandleErr) => {
       );
       break;
     case "affix":
-      const username = req.vars?.username;
+      const username = req.params?.username;
 
       if (!username) {
         return res.sendFile(
@@ -506,7 +506,7 @@ const redirect = async (req: Request, res: Response, handleErr: HandleErr) => {
 
 // Delete a url record
 const remove = async (req: Request, res: Response) => {
-  await DB.delete<IUrl>("urls", `id=$1`, [req.vars?.id]);
+  await DB.delete<IUrl>("urls", `id=$1`, [req.params?.id]);
   res.json({ message: "deleted" });
 };
 
@@ -519,7 +519,7 @@ const sendQrCode = async (
   const QR_CODE_VERSION = 4; // 33x33 matrix, 50 chars max
   const QR_CODE_ERROR_CORRECTION_LEVEL = "H"; // L, M, Q, H (L lowest, H highest)
 
-  if (!req.vars?.id) {
+  if (!req.params?.id) {
     return handleErr({ status: 400, message: "No URL ID provided" });
   }
 
@@ -536,7 +536,7 @@ const sendQrCode = async (
   }
 
   const url = await DB.find<IUrl>(`SELECT qr_code_id FROM urls WHERE id=$1`, [
-    req.vars.id,
+    req.params.id,
   ]);
 
   if (!url) {
@@ -586,7 +586,7 @@ const sendQrCode = async (
 
 // Check to see if an affix code is available
 const checkAffixAvailability = async (req: Request, res: Response) => {
-  const code = req.vars?.code;
+  const code = req.params?.code;
   const userId = req.user?.id;
 
   if (!code) {
@@ -601,7 +601,7 @@ const checkAffixAvailability = async (req: Request, res: Response) => {
 
 // Check to see if a custom  code is available
 const checkCustomAvailability = async (req: Request, res: Response) => {
-  const code = req.vars?.code;
+  const code = req.params?.code;
 
   if (!code) {
     return res.status(400).json({ message: "No code provided" });

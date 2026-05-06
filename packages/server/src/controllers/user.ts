@@ -18,7 +18,7 @@ const isUsernameAvailable = async (username: string): Promise<boolean> => {
 
 // Checks if a username is available
 const checkUsernameAvailability = async (req: Request, res: Response) => {
-  const username = req.vars?.username;
+  const username = req.params?.username;
 
   if (!username || typeof username !== "string") {
     return res

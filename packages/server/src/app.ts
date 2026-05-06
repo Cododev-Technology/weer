@@ -1,30 +1,18 @@
-import cpeak, { serveStatic, parseJSON } from "cpeak";
+import cpeak, { serveStatic, parseJSON, cookieParser } from "cpeak";
 import type { CpeakRequest as Request, CpeakResponse as Response } from "cpeak";
 
 import path from "path";
-import passport from "passport";
-import cookieSession from "cookie-session";
 import compression from "compression";
-// import expressSession from "express-session";
 import helmet from "helmet";
 
 import log from "./lib/log.js";
 import keys from "./config/keys.js";
 import apiRouter from "./router.js";
 
-import "./passport.js";
-
-const app = new cpeak();
+const app = cpeak();
 
 // For parsing JSON body
-app.beforeEach(parseJSON);
-
-// express session
-// app.beforeEach(
-//   expressSession({
-//     secret: "jhfweufiewhkjfweihfweifhwkjhkjhfiweh976tgu",
-//   }) as any
-// );
+app.beforeEach(parseJSON());
 
 // app.beforeEach(helmet());
 app.beforeEach(compression() as any);
@@ -42,16 +30,15 @@ if (!keys.cookieKey || keys.cookieKey.length < 32) {
   process.exit(1);
 }
 
-app.beforeEach(
-  cookieSession({
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    keys: [keys.cookieKey],
-  }) as any
-);
+// Cookie parsing with signed cookie support
+app.beforeEach(cookieParser({ secret: keys.cookieKey }));
 
-// Passport authentication
-app.beforeEach(passport.initialize() as any);
-app.beforeEach(passport.session());
+// Restore req.user from signed uid cookie on every request
+app.beforeEach((req, res, next) => {
+  const uid = req.signedCookies?.uid;
+  if (uid) req.user = { id: uid };
+  next();
+});
 
 // Logging middleware
 app.beforeEach((req, res, next) => {
@@ -107,13 +94,8 @@ app.handleErr((error: any, req: Request, res: Response) => {
   if (error && error.status) {
     res.status(error.status).json({ error: error.message });
   } else {
-    // if (error.code === "CPEAK_ERR_FILE_NOT_FOUND") {
-    //   return res.status(404).json({ error: "File not found." });
-    // }
-
     console.error(error);
     log(error);
-
     res.status(500).json({
       error: "Sorry, something unexpected happened from our side.",
     });

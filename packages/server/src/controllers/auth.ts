@@ -3,31 +3,62 @@ import crypto from "crypto";
 
 import { DB } from "../database/index.js";
 import type { IUser, ISession } from "../database/types.js";
+import { exchangeCodeForProfile } from "../lib/google-oauth.js";
 
-const login = async (req: Request, res: Response) => {
-  // ---- Migrate any urls created during the session to the user account ---- //
-  const userId = req.user.id;
-  const sessionToken = req.session.session_token; // from cookie
+const COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-  const session = await DB.find<ISession>(
-    `SELECT id FROM sessions WHERE session_token = $1`,
-    [sessionToken]
+const handleOAuthCallback = async (req: Request, res: Response) => {
+  const code = req.query?.code as string;
+  if (!code) return res.redirect("/");
+
+  const profile = await exchangeCodeForProfile(code);
+
+  let dbUser = await DB.find<IUser>(
+    "SELECT id FROM users WHERE google_id=$1",
+    [profile.sub]
   );
 
-  if (session) {
-    const sessionId = session.id;
-
-    await DB.query(
-      `UPDATE urls SET user_id = $1, session_id = NULL WHERE session_id = $2`,
-      [userId, sessionId]
-    );
+  if (!dbUser) {
+    dbUser = await DB.insert<IUser>("users", {
+      email: profile.email,
+      name: profile.name,
+      google_id: profile.sub,
+    });
   }
+
+  if (!dbUser) return res.redirect("/");
+
+  const userId = dbUser.id;
+
+  // ---- Migrate any urls created during the anonymous session to the user account ---- //
+  const sessionToken = req.signedCookies?.session_token || null;
+
+  if (sessionToken) {
+    const session = await DB.find<ISession>(
+      `SELECT id FROM sessions WHERE session_token = $1`,
+      [sessionToken]
+    );
+
+    if (session) {
+      await DB.query(
+        `UPDATE urls SET user_id = $1, session_id = NULL WHERE session_id = $2`,
+        [userId, session.id]
+      );
+    }
+  }
+
+  res.cookie("uid", String(userId), {
+    signed: true,
+    httpOnly: true,
+    maxAge: COOKIE_MAX_AGE,
+    sameSite: "lax",
+  });
 
   res.redirect("/");
 };
 
 const logOut = (req: Request, res: Response) => {
-  req.logout();
+  res.clearCookie("uid");
   res.redirect("/");
 };
 
@@ -41,7 +72,11 @@ const checkAuthStatus = async (req: Request, res: Response) => {
       sessionToken,
     ]);
 
-    req.session.session_token = sessionToken; // automatically is signed and set as cookie
+    res.cookie("session_token", sessionToken, {
+      signed: true,
+      httpOnly: true,
+      maxAge: COOKIE_MAX_AGE,
+    });
   };
 
   if (req.user) {
@@ -51,19 +86,19 @@ const checkAuthStatus = async (req: Request, res: Response) => {
     }
 
     const user = await DB.find<UserWithUsernames>(
-      `SELECT 
-        users.email, 
+      `SELECT
+        users.email,
         COALESCE(
         JSON_AGG(
           JSON_BUILD_OBJECT(
-            'value', usernames.username, 
+            'value', usernames.username,
             'expires_at', usernames.expires_at,
             'active', usernames.active
           )
           ORDER BY usernames.expires_at ASC NULLS LAST
         ) FILTER (WHERE usernames.username IS NOT NULL OR usernames.expires_at > NOW()), '[]') AS usernames
       FROM users
-      LEFT JOIN usernames ON users.id = usernames.user_id 
+      LEFT JOIN usernames ON users.id = usernames.user_id
       WHERE users.id = $1
       GROUP BY users.id`,
       [req.user.id]
@@ -77,11 +112,12 @@ const checkAuthStatus = async (req: Request, res: Response) => {
       });
     } else {
       // Something went wrong, log the user out
-      req.logout();
+      res.clearCookie("uid");
       return res.json({ isSignedIn: false });
     }
   } else {
-    let sessionToken = req.session?.session_token;
+    const rawToken = req.signedCookies?.session_token;
+    let sessionToken = typeof rawToken === "string" ? rawToken : null;
 
     // User doesn't have a session token
     if (!sessionToken) {
@@ -111,4 +147,4 @@ const checkAuthStatus = async (req: Request, res: Response) => {
   }
 };
 
-export default { logOut, checkAuthStatus, login };
+export default { handleOAuthCallback, logOut, checkAuthStatus };
