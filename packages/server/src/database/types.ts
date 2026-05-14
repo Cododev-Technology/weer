@@ -39,9 +39,7 @@ export interface IUrl {
   qr_code_id: string;
   user_id?: number;
   session_id?: number;
-  is_on_username: boolean;
   link_type: LinkType;
-  views: number;
   updated_at: Date;
   created_at: Date;
 }

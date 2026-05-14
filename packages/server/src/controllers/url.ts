@@ -584,6 +584,38 @@ const updateRealUrl = async (req: Request, res: Response) => {
   return res.json({ realUrl: newRealUrl });
 };
 
+// Return stats for a single shortened link
+const getStats = async (req: Request, res: Response) => {
+  const id = Number(req.params?.id);
+
+  if (!id) {
+    throw { status: 400, message: "Missing parameters" };
+  }
+
+  const row = await DB.find<{
+    total: string;
+    unique_visitors: string;
+    qr_clicks: string;
+    last_clicked: Date | null;
+  }>(
+    `SELECT
+      COUNT(*) AS total,
+      COUNT(DISTINCT visitor_hash) AS unique_visitors,
+      COUNT(*) FILTER (WHERE via_qr = true) AS qr_clicks,
+      MAX(created_at) AS last_clicked
+    FROM views
+    WHERE url_id = $1`,
+    [id]
+  );
+
+  return res.json({
+    total: parseInt(row?.total ?? "0", 10),
+    unique_visitors: parseInt(row?.unique_visitors ?? "0", 10),
+    qr_clicks: parseInt(row?.qr_clicks ?? "0", 10),
+    last_clicked: row?.last_clicked ?? null,
+  });
+};
+
 export default {
   getUrls,
   shorten,
@@ -594,4 +626,5 @@ export default {
   checkAffixAvailability,
   checkCustomAvailability,
   updateRealUrl,
+  getStats,
 };

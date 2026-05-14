@@ -136,7 +136,7 @@ export default (({
             icon="fa-solid fa-chart-simple"
             tooltipText="View Stats"
             onClick={() => {
-              dom.message("Feature coming soon.", "default");
+              openModal("linkStats", { urlId });
             }}
             onMouseLeave={() => {}}
           />

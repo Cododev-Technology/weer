@@ -10,6 +10,7 @@ import LoginModal from "./Login";
 import QRCodeModal from "./QRCode";
 import Username from "./Username";
 import EditRealUrlModal from "./EditRealUrl";
+import LinkStatsModal from "./LinkStats";
 
 interface GlobalModalRendererProps {
   modal: { type: string | null; props?: Record<string, any> };
@@ -68,6 +69,15 @@ export const GlobalModalRenderer = ({
           urlId={modal.props?.urlId}
           realUrl={modal.props?.realUrl}
           onSuccess={modal.props?.onSuccess}
+        />
+      );
+
+    case "linkStats":
+      return (
+        <LinkStatsModal
+          open
+          onClose={closeModal}
+          urlId={modal.props?.urlId}
         />
       );
 

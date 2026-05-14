@@ -91,4 +91,7 @@ export default (app: Cpeak) => {
 
   // Delete a url record
   app.route("delete", "/url/:id", middlewares.checkUrlOwnership, Url.remove);
+
+  // Get stats for a single shortened link
+  app.route("get", "/url/:id/stats", middlewares.checkUrlOwnership, Url.getStats);
 };
