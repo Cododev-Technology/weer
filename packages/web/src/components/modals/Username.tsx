@@ -236,8 +236,8 @@ const Username: FC<UsernameProps> = (props) => {
           <form action="">
             <div className="form-group">
               <Input
-                success={inputSuccess}
-                error={inputError}
+                success={inputSuccess ?? undefined}
+                error={inputError ?? undefined}
                 onChange={(value) => {
                   setUsernameInput(value);
 

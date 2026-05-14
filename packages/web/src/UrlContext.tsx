@@ -15,7 +15,7 @@ import type { LinkType } from "@weer/common";
 
 interface UrlContextValue {
   urls: IUrl[];
-  justCreatedUrlId?: string; // ID of the URL that was just created
+  justCreatedUrlId: string | null; // ID of the URL that was just created
   domain: string | null;
   loading: boolean;
   fetchUrls: () => Promise<void>;
@@ -23,7 +23,7 @@ interface UrlContextValue {
   changeType: (
     id: string,
     newType: LinkType,
-    newExpiresAt?: Date,
+    newExpiresAt?: string,
     newCode?: string
   ) => void;
   updateRealUrl: (id: string, newRealUrl: string) => void;
@@ -101,7 +101,7 @@ export const UrlProvider: React.FC<{ children: React.ReactNode }> = ({
     // Check if justCreatedUrlId is this, set it to null so that the URL is removed
     // from the URlShortener component if it was just created there
     if (justCreatedUrlId === id) {
-      setJustCreatedUrlId(undefined);
+      setJustCreatedUrlId(null);
     }
 
     setUrls((prevUrls) => prevUrls.filter((url) => url.id !== id));

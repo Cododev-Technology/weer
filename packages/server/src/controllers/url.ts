@@ -2,7 +2,7 @@ import type { CpeakRequest as Request, CpeakResponse as Response } from "cpeak";
 import QRCode from "qrcode";
 import crypto from "crypto";
 import path from "path";
-import type { LinkType } from "@weer/common";
+import type { LinkType, API } from "@weer/common";
 import { DB } from "../database/index.js";
 import type {
   IUrl,
@@ -608,12 +608,14 @@ const getStats = async (req: Request, res: Response) => {
     [id]
   );
 
-  return res.json({
+  const stats: API.Url.Stats = {
     total: parseInt(row?.total ?? "0", 10),
     unique_visitors: parseInt(row?.unique_visitors ?? "0", 10),
     qr_clicks: parseInt(row?.qr_clicks ?? "0", 10),
-    last_clicked: row?.last_clicked ?? null,
-  });
+    last_clicked: row?.last_clicked?.toISOString() ?? null,
+  };
+
+  return res.json(stats);
 };
 
 export default {

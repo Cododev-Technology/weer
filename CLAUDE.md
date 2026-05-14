@@ -8,6 +8,8 @@ Weer is a production-grade URL shortener built as a monorepo. It serves as the f
 
 You will not change comments, the logic or code style in any shape or form. If you have to and it is absolutely necessary, you need to get a confirmation first. Your main job is to handle the drudgery and repetitive work, not to invent things on your own. If you see something that is wrong, you can point it out, but DO NOT change it without confirmation.
 
+This is a yarn project and all project commands should be run with `yarn`.
+
 ## Monorepo Structure
 
 ```
@@ -28,13 +30,13 @@ packages/
 cd packages/server && yarn dev
 
 # Build and watch frontend (run in separate terminal)
-cd packages/web && npm run dev
+cd packages/web && yarn dev
 
 # Build and watch styles (run in separate terminal)
-cd packages/styles && npm run dev
+cd packages/styles && yarn dev
 
 # Build and watch shared types
-cd packages/common && npm run dev
+cd packages/common && yarn dev
 ```
 
 ### Testing
@@ -47,19 +49,19 @@ cd packages/server && yarn test
 cd packages/server && yarn mocha --extension ts __tests__/routes.test.ts --timeout 10000
 
 # Run frontend tests
-cd packages/web && npm test
+cd packages/web && yarn test
 ```
 
 ### Building (production)
 
 ```bash
 # Build everything in dependency order: reusable → common → web → styles → server
-npm run build   # from root
+yarn build   # from root
 
 # Build individual packages
 cd packages/server && yarn build   # tsc -p .
-cd packages/web && npm run build   # webpack --mode production
-cd packages/styles && npm run build
+cd packages/web && yarn build   # webpack --mode production
+cd packages/styles && yarn build
 ```
 
 ### Database

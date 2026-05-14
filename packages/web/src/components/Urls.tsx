@@ -38,7 +38,7 @@ const Urls: FC<UrlsProps> = (props) => {
             expiresAt={url.expires_at}
             onList={true}
             shortenedUrlCode={url.code}
-            domain={domain}
+            domain={domain!}
             onDelete={() => {
               deleteUrl(url.id);
             }}

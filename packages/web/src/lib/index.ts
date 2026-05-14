@@ -72,7 +72,7 @@ interface Lib {
   simplifyUrl: (url: string) => string;
   cutString: (string: string, maxLength: number) => string;
   handleErr: (error: any) => void;
-  formatDuration: (milliseconds: number) => string;
+  formatDuration: (milliseconds: number | Date) => string;
   ensureProtocol: (url: string) => string;
 }
 

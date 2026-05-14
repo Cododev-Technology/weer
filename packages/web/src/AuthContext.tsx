@@ -14,6 +14,8 @@ interface AuthContextValue {
   email: string;
   username: string;
   refreshAuth: () => Promise<void>;
+  updateUsername: (newUsername: string) => Promise<void>;
+  inactiveUsernames: InactiveUsername[];
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);

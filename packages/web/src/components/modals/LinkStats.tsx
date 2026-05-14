@@ -1,5 +1,6 @@
 import React, { FC, useEffect, useState } from "react";
 import axios from "axios";
+import type { API } from "@weer/common";
 
 import { Modal, Loading } from "@weer/reusable";
 import lib from "../../lib";
@@ -10,16 +11,9 @@ interface LinkStatsProps {
   urlId: string | null;
 }
 
-interface IStats {
-  total: number;
-  unique_visitors: number;
-  qr_clicks: number;
-  last_clicked: string | null;
-}
-
 const LinkStats: FC<LinkStatsProps> = (props) => {
   const [loading, setLoading] = useState<boolean>(true);
-  const [stats, setStats] = useState<IStats | null>(null);
+  const [stats, setStats] = useState<API.Url.Stats | null>(null);
 
   useEffect(() => {
     if (!props.open || !props.urlId) return;
@@ -28,7 +22,7 @@ const LinkStats: FC<LinkStatsProps> = (props) => {
     setStats(null);
 
     axios
-      .get<IStats>(`/url/${props.urlId}/stats`)
+      .get<API.Url.Stats>(`/url/${props.urlId}/stats`)
       .then((res) => {
         setStats(res.data);
       })

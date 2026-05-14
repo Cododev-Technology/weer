@@ -102,9 +102,10 @@ const UrlShortener: FC<UrlShortenerProps> = (props) => {
           urlId={createdUrlObject.id}
           realUrl={createdUrlObject.real_url}
           shortenedUrlCode={createdUrlObject.code}
-          domain={domain}
+          domain={domain!}
           expiresAt={createdUrlObject.expires_at}
           type={createdUrlObject.link_type}
+          onList={false}
         />
       )}
 

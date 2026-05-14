@@ -9,6 +9,7 @@ interface LinkConfirmDeleteProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  onDeleteUrl?: () => void;
   urlId: string | null;
   realUrl: string;
 }
@@ -29,7 +30,7 @@ const LinkConfirmDelete: FC<LinkConfirmDeleteProps> = (props) => {
       props.onClose();
 
       dom.message("URL deleted successfully.", "success");
-      props.onDeleteUrl();
+      if (props.onDeleteUrl) props.onDeleteUrl();
     } catch (e) {
       // show an error message to user on unexpected errors
       dom.message(

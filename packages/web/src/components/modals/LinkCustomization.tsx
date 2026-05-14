@@ -90,7 +90,7 @@ const LinkCustomization: FC<LinkCustomizationProps> = (props) => {
         type: "classic",
       });
 
-      props.onChangeType("classic", null, data.code);
+      props.onChangeType("classic", undefined, data.code);
     } catch (error: any) {
       lib.handleErr(error);
     } finally {
@@ -195,7 +195,7 @@ const LinkCustomization: FC<LinkCustomizationProps> = (props) => {
         code: affixCode,
       });
 
-      props.onChangeType("affix", null, affixCode);
+      props.onChangeType("affix", undefined, affixCode);
     } catch (error: any) {
       lib.handleErr(error);
     } finally {
@@ -278,7 +278,7 @@ const LinkCustomization: FC<LinkCustomizationProps> = (props) => {
         code: customCode,
       });
 
-      props.onChangeType("custom", null, customCode);
+      props.onChangeType("custom", undefined, customCode);
     } catch (error: any) {
       lib.handleErr(error);
     } finally {

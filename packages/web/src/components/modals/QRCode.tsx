@@ -36,12 +36,8 @@ const QRCode: FC<QRCodeProps> = (props) => {
             setFormat(value);
           }}
         >
-          <option value="SVG" data="SVG">
-            SVG
-          </option>
-          <option value="PNG" data="PNG">
-            PNG
-          </option>
+          <option value="SVG">SVG</option>
+          <option value="PNG">PNG</option>
         </Select>
       </div>
 

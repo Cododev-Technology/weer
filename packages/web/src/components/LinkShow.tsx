@@ -164,7 +164,7 @@ export default (({
                 urlId,
                 realUrl,
                 onSuccess: (newRealUrl: string) => {
-                  updateRealUrl(urlId, newRealUrl);
+                  updateRealUrl(urlId!, newRealUrl);
                 },
               });
             }}
@@ -190,7 +190,7 @@ export default (({
                   newExpiresAt?: string,
                   newCode?: string
                 ) => {
-                  changeType(urlId, newType, newExpiresAt, newCode);
+                  changeType(urlId!, newType, newExpiresAt, newCode);
 
                   const validFor =
                     new Date(newExpiresAt || "").getTime() - Date.now();
