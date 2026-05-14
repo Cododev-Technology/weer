@@ -37,10 +37,12 @@ const LinkStats: FC<LinkStatsProps> = (props) => {
 
   const formatDate = (raw: string | null) => {
     if (!raw) return "—";
-    return new Date(raw).toLocaleDateString(undefined, {
+    return new Date(raw).toLocaleString(undefined, {
       year: "numeric",
       month: "short",
       day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
     });
   };
 
@@ -71,7 +73,7 @@ const LinkStats: FC<LinkStatsProps> = (props) => {
               <span className="link-stats__label">QR Views</span>
             </div>
             <div className="link-stats__card">
-              <span className="link-stats__value">
+              <span className="link-stats__value link-stats__value--date">
                 {formatDate(stats?.last_clicked ?? null)}
               </span>
               <span className="link-stats__label">Last Clicked</span>
