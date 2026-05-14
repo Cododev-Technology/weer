@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Weer is a production-grade URL shortener built as a monorepo. It serves as the first real-world application for the **Cpeak** framework — a zero-dependency Node.js framework developed alongside this project. The backend is PostgreSQL-backed; the frontend is React with Webpack.
 
+You will not change comments, the logic or code style in any shape or form. If you have to and it is absolutely necessary, you need to get a confirmation first. Your main job is to handle the drudgery and repetitive work, not to invent things on your own. If you see something that is wrong, you can point it out, but DO NOT change it without confirmation.
+
 ## Monorepo Structure
 
 ```
@@ -91,7 +93,7 @@ Link generation logic lives in `packages/server/src/lib/links.ts`. URL controlle
 
 ### Database
 
-PostgreSQL with a connection pool defined in `packages/server/src/database/index.ts`. Schema SQL files are in `src/database/tables/`. No ORM — raw SQL queries throughout.
+PostgreSQL with a connection pool defined in `packages/server/src/database/index.ts`. Schema SQL files are in `src/database/tables/`. No ORM — raw SQL queries throughout. Study the packages/server/src/database/index.ts file before dealing with any database-related code.
 
 ### Configuration
 

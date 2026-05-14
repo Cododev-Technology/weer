@@ -36,7 +36,7 @@ app.beforeEach(cookieParser({ secret: keys.cookieKey }));
 // Restore req.user from signed uid cookie on every request
 app.beforeEach((req, res, next) => {
   const uid = req.signedCookies?.uid;
-  if (uid) req.user = { id: uid };
+  if (uid) req.user = { id: Number(uid) };
   next();
 });
 

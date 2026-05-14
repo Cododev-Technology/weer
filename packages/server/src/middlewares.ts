@@ -61,9 +61,9 @@ async function checkUrlOwnership(req: Request, res: Response, next: Next) {
     }
   } else if (url && url.user_id === req.user.id) {
     return next();
-  } else {
-    throw { status: 403, message: "Not allowed to access." };
   }
+
+  throw { status: 403, message: "Not allowed to access." };
 }
 
 async function requireAuth(req: Request, res: Response, next: Next) {

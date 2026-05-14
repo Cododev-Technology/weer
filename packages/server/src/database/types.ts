@@ -10,7 +10,7 @@ export type TTables =
   | "views";
 
 export interface IUser {
-  id: string;
+  id: number;
   google_id?: string;
   username?: string;
   email?: string;
@@ -25,7 +25,7 @@ export interface IUser {
 
 export interface IUsername {
   id: number;
-  user_id: string;
+  user_id: number;
   username: string;
   active: boolean;
   expires_at?: Date;

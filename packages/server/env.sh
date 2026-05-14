@@ -23,5 +23,5 @@ else
 fi
 
 # take all remaining arguments and run them as a command
-exec "$@"
+exec env "$@"
 
