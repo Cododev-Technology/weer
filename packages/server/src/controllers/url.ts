@@ -1,7 +1,6 @@
 import type {
   CpeakRequest as Request,
   CpeakResponse as Response,
-  HandleErr,
 } from "cpeak";
 import QRCode from "qrcode";
 import crypto from "crypto";
@@ -111,11 +110,7 @@ interface IRequestBody {
 }
 
 // Get the url, shorten it and save to database
-const shorten = async (
-  req: Request<IRequestBody>,
-  res: Response,
-  handleError: HandleErr
-) => {
+const shorten = async (req: Request<IRequestBody>, res: Response) => {
   // Get the user id if the user is logged in
   let userId = req.user ? req.user.id : null;
 
@@ -162,12 +157,11 @@ const shorten = async (
         // Delete the inserted URL record if we could not generate a code
         await DB.delete<IUrl>("urls", `id=$1`, [insertedUrl!.id]);
 
-        return handleError(error);
+        throw error;
       }
       break;
     case "ultra":
-      if (!req.user)
-        return handleError({ status: 401, message: "Unauthorized" });
+      if (!req.user) throw { status: 401, message: "Unauthorized" };
       try {
         const obj = await generateUltra(insertedUrl!.id);
         expiresAt = obj.expiresAt;
@@ -176,7 +170,7 @@ const shorten = async (
         // Delete the inserted URL record if we could not generate a code
         await DB.delete<IUrl>("urls", `id=$1`, [insertedUrl!.id]);
 
-        return handleError(error);
+        throw error;
       }
       break;
     case "digit":
@@ -192,13 +186,13 @@ const shorten = async (
           // Delete the inserted URL record if we could not generate a code
           await DB.delete<IUrl>("urls", `id=$1`, [insertedUrl!.id]);
 
-          return handleError(error);
+          throw error;
         }
       }
       break;
 
     default:
-      return handleError({ status: 400, message: "Invalid type" });
+      throw { status: 400, message: "Invalid type" };
   }
 
   return res.json({
@@ -211,11 +205,7 @@ const shorten = async (
 };
 
 // Change the type of a url (e.g. from classic to custom). User can do this from the customization modal
-const changeUrlType = async (
-  req: Request,
-  res: Response,
-  handleError: HandleErr
-) => {
+const changeUrlType = async (req: Request, res: Response) => {
   const id = Number(req.params?.id);
   const newType = req.body?.type as LinkType;
 
@@ -275,92 +265,76 @@ const changeUrlType = async (
 
   switch (newType) {
     case "classic":
-      try {
-        newShortenedCode = await generateClassic(id);
-      } catch (error) {
-        return handleError(error);
-      }
+      newShortenedCode = await generateClassic(id);
       break;
 
     case "ultra":
-      if (!req.user)
-        return handleError({ status: 401, message: "Unauthorized" });
-      try {
+      if (!req.user) throw { status: 401, message: "Unauthorized" };
+      {
         const obj = await generateUltra(id);
         expiresAt = obj.expiresAt;
         newShortenedCode = obj.code;
-      } catch (error) {
-        return handleError(error);
       }
       break;
 
     case "digit":
-      try {
+      {
         const obj = await generateDigit(id);
         expiresAt = obj.expiresAt;
         newShortenedCode = obj.code;
-      } catch (error) {
-        return handleError(error);
       }
       break;
 
-    case "affix":
-      if (!req.user)
-        return handleError({ status: 401, message: "Unauthorized" });
-      try {
-        const affixCode = req.body?.code;
-        /** @todo validate the affixCode */
+    case "affix": {
+      if (!req.user) throw { status: 401, message: "Unauthorized" };
+      const affixCode = req.body?.code;
+      /** @todo validate the affixCode */
 
-        const available = await isAffixAvailable(affixCode, req.user.id);
-        if (!available) {
-          return handleError({ status: 400, message: "Code is not available" });
-        }
-
-        // Update the url record with the affix code
-        await DB.update<IUrl>(
-          "urls",
-          {
-            shortened_url_id: affixCode,
-            link_type: "affix",
-          },
-          `id = $3`,
-          [id]
-        );
-
-        newShortenedCode = affixCode;
-      } catch (e) {
-        return handleError(e);
+      const available = await isAffixAvailable(affixCode, req.user.id);
+      if (!available) {
+        throw { status: 400, message: "Code is not available" };
       }
+
+      // Update the url record with the affix code
+      await DB.update<IUrl>(
+        "urls",
+        {
+          shortened_url_id: affixCode,
+          link_type: "affix",
+        },
+        `id = $3`,
+        [id]
+      );
+
+      newShortenedCode = affixCode;
       break;
-    case "custom":
-      try {
-        const customCode = req.body?.code;
-        /** @todo validate the customCode */
+    }
+    case "custom": {
+      const customCode = req.body?.code;
+      /** @todo validate the customCode */
 
-        const available = await isCustomAvailable(customCode);
-        if (!available) {
-          return handleError({ status: 400, message: "Code is not available" });
-        }
-
-        // Update the url record with the custom code
-        await DB.update<IUrl>(
-          "urls",
-          {
-            shortened_url_id: customCode,
-            link_type: "custom",
-          },
-          `id = $3`,
-          [id]
-        );
-
-        newShortenedCode = customCode;
-      } catch (e) {
-        return handleError(e);
+      const available = await isCustomAvailable(customCode);
+      if (!available) {
+        throw { status: 400, message: "Code is not available" };
       }
+
+      // Update the url record with the custom code
+      await DB.update<IUrl>(
+        "urls",
+        {
+          shortened_url_id: customCode,
+          link_type: "custom",
+        },
+        `id = $3`,
+        [id]
+      );
+
+      newShortenedCode = customCode;
       break;
+    }
 
     default:
-      return handleError({ status: 400, message: "Invalid type" });
+      throw { status: 400, message: "Invalid type" };
   }
 
   const typesWithExpiresAt = ["ultra", "digit"];
@@ -374,11 +348,11 @@ const changeUrlType = async (
 
 /** @TODO FIX ERROR RETURN IN CPEAK SEND FILE */
 // Redirect to the real url
-const redirect = async (req: Request, res: Response, handleErr: HandleErr) => {
+const redirect = async (req: Request, res: Response) => {
   const code = req.params?.id;
 
   if (!code) {
-    return handleErr(new Error("No URL ID provided"));
+    throw new Error("No URL ID provided");
   }
 
   const processedCode = processCode(code, req.params?.username, req.url);
@@ -511,16 +485,12 @@ const remove = async (req: Request, res: Response) => {
 };
 
 // Generates and sends a QR code
-const sendQrCode = async (
-  req: Request,
-  res: Response,
-  handleErr: HandleErr
-) => {
+const sendQrCode = async (req: Request, res: Response) => {
   const QR_CODE_VERSION = 4; // 33x33 matrix, 50 chars max
   const QR_CODE_ERROR_CORRECTION_LEVEL = "H"; // L, M, Q, H (L lowest, H highest)
 
   if (!req.params?.id) {
-    return handleErr({ status: 400, message: "No URL ID provided" });
+    throw { status: 400, message: "No URL ID provided" };
   }
 
   const download = req.query.download === "true" ? true : false;
@@ -540,7 +510,7 @@ const sendQrCode = async (
   ]);
 
   if (!url) {
-    return handleErr({ status: 404, message: "URL not found" });
+    throw { status: 404, message: "URL not found" };
   }
 
   const data = `${keys.domain}/q/${url.qr_code_id}`;
@@ -554,33 +524,25 @@ const sendQrCode = async (
   }
 
   if (type === "svg") {
-    try {
-      const svg = await QRCode.toString(data, {
-        type: "svg",
-        version: QR_CODE_VERSION,
-        margin: 0.5,
+    const svg = await QRCode.toString(data, {
+      type: "svg",
+      version: QR_CODE_VERSION,
+      margin: 0.5,
 
-        errorCorrectionLevel: QR_CODE_ERROR_CORRECTION_LEVEL,
-      });
+      errorCorrectionLevel: QR_CODE_ERROR_CORRECTION_LEVEL,
+    });
 
-      res.setHeader("Content-Type", "image/svg+xml");
-      res.end(svg);
-    } catch (error) {
-      return handleErr(error);
-    }
+    res.setHeader("Content-Type", "image/svg+xml");
+    res.end(svg);
   } else {
-    try {
-      res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Type", "image/png");
 
-      await QRCode.toFileStream(res, data, {
-        version: QR_CODE_VERSION,
-        margin: 0.5,
-        errorCorrectionLevel: QR_CODE_ERROR_CORRECTION_LEVEL,
-        width: size,
-      });
-    } catch (err) {
-      return handleErr(err);
-    }
+    await QRCode.toFileStream(res, data, {
+      version: QR_CODE_VERSION,
+      margin: 0.5,
+      errorCorrectionLevel: QR_CODE_ERROR_CORRECTION_LEVEL,
+      width: size,
+    });
   }
 };
 

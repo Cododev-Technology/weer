@@ -1,7 +1,6 @@
 import type {
   CpeakRequest as Request,
   CpeakResponse as Response,
-  HandleErr,
   Next,
   RouteMiddleware,
 } from "cpeak";
@@ -15,20 +14,15 @@ interface Middlewares {
   requireAuth: RouteMiddleware;
 }
 
-function isValidURL(
-  req: Request,
-  res: Response,
-  next: Next,
-  handleErr: HandleErr
-) {
+function isValidURL(req: Request, res: Response, next: Next) {
   const body = req.body as { url?: string };
   const url = body.url || "";
 
   if (url.length === 0)
-    return handleErr({
+    throw {
       status: 400,
       message: "Please first put your URL here.",
-    });
+    };
 
   // Function to validate url
   const validURL = (str: string) => {
@@ -40,20 +34,15 @@ function isValidURL(
   if (validURL(url)) {
     next();
   } else {
-    return handleErr({ status: 400, message: "The URL you put is not valid." });
+    throw { status: 400, message: "The URL you put is not valid." };
   }
 }
 
-async function checkUrlOwnership(
-  req: Request,
-  res: Response,
-  next: Next,
-  handleErr: HandleErr
-) {
+async function checkUrlOwnership(req: Request, res: Response, next: Next) {
   const urlId = Number(req.params?.id);
 
   if (!urlId) {
-    return handleErr({ status: 400, message: "Invalid URL ID." });
+    throw { status: 400, message: "Invalid URL ID." };
   }
 
   const url = await DB.find<IUrl>(
@@ -73,17 +62,12 @@ async function checkUrlOwnership(
   } else if (url && url.user_id === req.user.id) {
     return next();
   } else {
-    return handleErr({ status: 403, message: "Not allowed to access." });
+    throw { status: 403, message: "Not allowed to access." };
   }
 }
 
-async function requireAuth(
-  req: Request,
-  res: Response,
-  next: Next,
-  handleErr: HandleErr
-) {
-  if (!req.user) return handleErr({ status: 401, message: "Unauthorized" });
+async function requireAuth(req: Request, res: Response, next: Next) {
+  if (!req.user) throw { status: 401, message: "Unauthorized" };
   next();
 }
 

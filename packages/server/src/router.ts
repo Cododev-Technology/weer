@@ -2,7 +2,6 @@ import type {
   Cpeak,
   CpeakRequest as Request,
   CpeakResponse as Response,
-  HandleErr,
 } from "cpeak";
 
 import { buildAuthUrl } from "./lib/google-oauth.js";
