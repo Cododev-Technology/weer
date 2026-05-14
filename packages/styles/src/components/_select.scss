@@ -1,5 +1,8 @@
 // Custom built element to use instead of the default select input
 
+@use "sass:color";
+@use "../abstracts/variables" as *;
+
 .form-select {
   position: relative;
   font-size: 1.6rem;
@@ -88,7 +91,7 @@
     }
 
     &:hover {
-      border: 1px solid darken(#dddddd, 20%);
+      border: 1px solid color.adjust(#dddddd, $lightness: -20%);
     }
 
     &:focus {

@@ -1,3 +1,5 @@
+@use "../abstracts/variables" as *;
+
 #snackbar {
   visibility: hidden;
   min-width: 25rem;

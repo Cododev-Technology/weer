@@ -1,25 +1,22 @@
-@import "abstracts/variables";
-@import "abstracts/mixins";
+@use "base/base";
+@use "base/singles";
+@use "base/utils";
+@use "base/animations";
 
-@import "base/base";
-@import "base/singles";
-@import "base/utils";
-@import "base/animations";
+@use "components/boxes";
+@use "components/buttons";
+@use "components/auth";
+@use "components/forms";
+@use "components/select";
+@use "components/link";
+@use "components/loading-icon";
+@use "components/tooltip";
+@use "components/snackbar";
+@use "components/url-shortener";
+@use "components/modal";
+@use "components/customization";
+@use "components/qr";
+@use "components/username";
 
-@import "components/boxes";
-@import "components/buttons";
-@import "components/auth";
-@import "components/forms";
-@import "components/select";
-@import "components/link";
-@import "components/loading-icon";
-@import "components/tooltip";
-@import "components/snackbar";
-@import "components/url-shortener";
-@import "components/modal";
-@import "components/customization";
-@import "components/qr";
-@import "components/username";
-
-@import "layout/navigation";
-@import "layout/footer";
+@use "layout/navigation";
+@use "layout/footer";

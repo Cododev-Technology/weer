@@ -1,3 +1,5 @@
+@use "../abstracts/variables" as *;
+
 .link {
   display: flex;
   justify-content: space-between;
@@ -26,8 +28,10 @@
 
   &__shortened-link {
     flex-basis: 20%;
+    min-width: 0;
     justify-content: start;
     display: flex;
+    overflow-wrap: anywhere;
 
     .link__shortened-link--expired {
       font-style: italic;
