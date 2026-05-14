@@ -31,7 +31,7 @@ export default (({
   const [copyTooltipText, setCopyTooltipText] = useState<string>("Copy");
   const { openModal } = useModal();
   const { username } = useAuth();
-  const { changeType } = useUrl();
+  const { changeType, updateRealUrl } = useUrl();
 
   const [timeLeft, setTimeLeft] = useState("");
 
@@ -160,7 +160,13 @@ export default (({
             icon="fa-solid fa-pen-to-square"
             tooltipText="Edit Link"
             onClick={() => {
-              dom.message("Feature coming soon.", "default");
+              openModal("editRealUrl", {
+                urlId,
+                realUrl,
+                onSuccess: (newRealUrl: string) => {
+                  updateRealUrl(urlId, newRealUrl);
+                },
+              });
             }}
             onMouseLeave={() => {}}
           />

@@ -1,7 +1,4 @@
-import type {
-  CpeakRequest as Request,
-  CpeakResponse as Response,
-} from "cpeak";
+import type { CpeakRequest as Request, CpeakResponse as Response } from "cpeak";
 import QRCode from "qrcode";
 import crypto from "crypto";
 import path from "path";
@@ -573,6 +570,20 @@ const checkCustomAvailability = async (req: Request, res: Response) => {
   res.json({ available });
 };
 
+// Update the destination URL of an existing shortened link
+const updateRealUrl = async (req: Request, res: Response) => {
+  const id = Number(req.params?.id);
+  const newRealUrl = req.body?.url;
+
+  if (!id || !newRealUrl) {
+    throw { status: 400, message: "Missing parameters" };
+  }
+
+  await DB.update<IUrl>("urls", { real_url: newRealUrl }, `id = $2`, [id]);
+
+  return res.json({ realUrl: newRealUrl });
+};
+
 export default {
   getUrls,
   shorten,
@@ -582,4 +593,5 @@ export default {
   changeUrlType,
   checkAffixAvailability,
   checkCustomAvailability,
+  updateRealUrl,
 };

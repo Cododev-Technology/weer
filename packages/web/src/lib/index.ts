@@ -20,6 +20,11 @@ function handleErr(error: any) {
   }
 }
 
+function ensureProtocol(url: string): string {
+  if (!url.match(/^[a-zA-Z]+:\/\//)) return "https://" + url;
+  return url;
+}
+
 function cutString(string: string, maxLength: number): string {
   if (string.length > maxLength) return string.substring(0, maxLength) + "...";
   return string;
@@ -68,6 +73,7 @@ interface Lib {
   cutString: (string: string, maxLength: number) => string;
   handleErr: (error: any) => void;
   formatDuration: (milliseconds: number) => string;
+  ensureProtocol: (url: string) => string;
 }
 
 const lib: Lib = {
@@ -76,6 +82,7 @@ const lib: Lib = {
   cutString,
   simplifyUrl,
   formatDuration,
+  ensureProtocol,
 };
 
 export default lib;

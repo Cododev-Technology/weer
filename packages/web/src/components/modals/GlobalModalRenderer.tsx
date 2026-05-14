@@ -9,6 +9,7 @@ import LinkConfirmDeleteModal from "./LinkConfirmDelete";
 import LoginModal from "./Login";
 import QRCodeModal from "./QRCode";
 import Username from "./Username";
+import EditRealUrlModal from "./EditRealUrl";
 
 interface GlobalModalRendererProps {
   modal: { type: string | null; props?: Record<string, any> };
@@ -57,6 +58,17 @@ export const GlobalModalRenderer = ({
     case "qrCode":
       return (
         <QRCodeModal open onClose={closeModal} urlId={modal.props?.urlId} />
+      );
+
+    case "editRealUrl":
+      return (
+        <EditRealUrlModal
+          open
+          onClose={closeModal}
+          urlId={modal.props?.urlId}
+          realUrl={modal.props?.realUrl}
+          onSuccess={modal.props?.onSuccess}
+        />
       );
 
     default:

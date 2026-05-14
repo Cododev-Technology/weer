@@ -26,6 +26,7 @@ interface UrlContextValue {
     newExpiresAt?: Date,
     newCode?: string
   ) => void;
+  updateRealUrl: (id: string, newRealUrl: string) => void;
   addUrl: (url: IUrl) => void;
   deleteUrl: (id: string) => void;
 }
@@ -106,6 +107,14 @@ export const UrlProvider: React.FC<{ children: React.ReactNode }> = ({
     setUrls((prevUrls) => prevUrls.filter((url) => url.id !== id));
   };
 
+  const updateRealUrl = (id: string, newRealUrl: string) => {
+    setUrls((prevUrls) =>
+      prevUrls.map((url) =>
+        url.id === id ? { ...url, real_url: newRealUrl } : url
+      )
+    );
+  };
+
   // Change a URL type and possibly other fields
   const changeType = (
     id: string,
@@ -136,6 +145,7 @@ export const UrlProvider: React.FC<{ children: React.ReactNode }> = ({
     addUrl,
     deleteUrl,
     changeType,
+    updateRealUrl,
     justCreatedUrlId,
   };
 

@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { GlobalModalRenderer } from "./components/modals/GlobalModalRenderer";
 
-type ModalType = "login" | "confirmDelete" | "qrCode" | "customizeLink" | null;
+type ModalType = "login" | "confirmDelete" | "qrCode" | "customizeLink" | "editRealUrl" | null;
 
 interface ModalContextValue {
   openModal: (type: ModalType, props?: Record<string, any>) => void;
