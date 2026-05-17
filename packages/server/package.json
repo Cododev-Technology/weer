@@ -21,7 +21,7 @@
     "@types/qrcode": "^1.5.5",
     "@weer/common": "1.0.0",
     "compression": "^1.7.4",
-    "cpeak": "2.8.0",
+    "cpeak": "2.9.0",
     "helmet": "^8.1.0",
     "ioredis": "^5.10.1",
     "pg": "^8.16.3",
