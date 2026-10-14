@@ -532,11 +532,11 @@ mod checking_if_a_code_is_available {
             let (agent, link) = create_anonymous_link().await;
             agent
                 .patch(&format!("/url/{}/type", link["URLId"]))
-                .send(json!({ "type": "custom", "code": "my code/é" }))
+                .send(json!({ "type": "custom", "code": "my-code_1" }))
                 .await;
 
             let res = request(app())
-                .get("/url/custom-availability/my%20code%2F%C3%A9")
+                .get("/url/custom-availability/my%2Dcode%5F1")
                 .await;
 
             assert_eq!(res.text, json!({ "available": false }).to_string());

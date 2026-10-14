@@ -123,10 +123,10 @@ mod logs {
         test(async {
             let requests = [
                 ("get", "/logout", "302 Found"),
-                ("get", "/user/username-availability/joe", "401 Unauthorized"),
+                ("get", "/user/username-availability/joe", "200 OK"),
                 ("post", "/url", "400 Bad Request"),
                 ("delete", "/url/12345", "403 Forbidden"),
-                ("get", "/nope/nope%20nope/nope", "200 OK"),
+                ("get", "/nope/nope%20nope/nope", "404 Not Found"),
                 ("get", "/abc/", "500 Internal Server Error"),
             ];
 

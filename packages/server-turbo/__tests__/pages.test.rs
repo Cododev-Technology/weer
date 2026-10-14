@@ -104,7 +104,7 @@ mod pages_and_static_files {
             ];
 
             for res in responses {
-                assert_eq!(res.status_code, 200);
+                assert_eq!(res.status_code, 404);
                 assert_eq!(res.header("content-type"), Some("text/html"));
                 assert_eq!(res.bytes, read("/404.html"));
             }

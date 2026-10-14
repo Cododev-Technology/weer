@@ -50,6 +50,14 @@ qrcode = { version = "0.14", default-features = false, features = ["image", "svg
 image = { version = "0.25", default-features = false, features = ["png"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 url = "2"
+rand = "0.10"
+regex = "1"
+subtle = "2"
+# Amazon SES, what @aws-sdk/client-ses is in the Node.js version. Its HTTPS client uses ring,
+# like everything else here (the default one would bring in a second TLS crypto library).
+aws-config = { version = "1", default-features = false, features = ["rt-tokio"] }
+aws-sdk-ses = { version = "1", default-features = false, features = ["rt-tokio"] }
+aws-smithy-http-client = { version = "1", default-features = false, features = ["rustls-ring"] }
 
 # The crates we depend on (Cpeak, the PostgreSQL client, ...) are optimized even in debug
 # builds, so `yarn dev` and the tests stay fast while our own code still compiles quickly.

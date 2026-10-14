@@ -133,14 +133,14 @@ describe("Redirecting to the real URL", () => {
     const link = await createLink(agent, "classic", OTHER_URL);
     await agent
       .patch(`/url/${link.URLId}/type`)
-      .send({ type: "custom", code: "My own code & more" });
+      .send({ type: "custom", code: "My-own-code_and-more" });
 
-    const res = await request(app).get("/My%20own%20code%20%26%20more");
+    const res = await request(app).get("/My-own-code_and-more");
 
     assert.strictEqual(res.statusCode, 302);
     assert.strictEqual(
       res.headers.location,
-      "/redirect-warning?type=custom&code=My+own+code+%26+more"
+      "/redirect-warning?type=custom&code=My-own-code_and-more"
     );
   });
 
@@ -169,7 +169,7 @@ describe("Redirecting to the real URL", () => {
     for (const path of ["/other/portfolio", "/nobody/portfolio"]) {
       const notFound = await request(app).get(path);
 
-      assert.strictEqual(notFound.statusCode, 200, path);
+      assert.strictEqual(notFound.statusCode, 404, path);
       assert.strictEqual(
         notFound.text,
         fs.readFileSync(publicPath + "/404.html", "utf8")
@@ -199,7 +199,7 @@ describe("Redirecting to the real URL", () => {
     for (const path of ["/nope12", "/zz", "/12345", "/not-a-code", "/q/nope", "/a$"]) {
       const res = await request(app).get(path);
 
-      assert.strictEqual(res.statusCode, 200, path);
+      assert.strictEqual(res.statusCode, 404, path);
       assert.match(res.headers["content-type"], /^text\/html/);
       assert.strictEqual(
         res.text,
@@ -310,14 +310,14 @@ describe("The redirect warning page", () => {
     const link = await createLink(agent, "classic", OTHER_URL);
     await agent
       .patch(`/url/${link.URLId}/type`)
-      .send({ type: "affix", code: "my portfolio" });
+      .send({ type: "affix", code: "my-portfolio" });
     const [{ qr_code_id }] = await DB.query(
       "SELECT qr_code_id FROM urls WHERE id = $1",
       [link.URLId]
     );
 
     const affix = await request(app).get(
-      "/redirect-warning/data?type=affix&code=my+portfolio&username=joe"
+      "/redirect-warning/data?type=affix&code=my-portfolio&username=joe"
     );
     assert.strictEqual(affix.text, JSON.stringify({ realUrl: OTHER_URL }));
 
@@ -328,7 +328,7 @@ describe("The redirect warning page", () => {
 
     // An affix link is nothing without its username
     const withoutUsername = await request(app).get(
-      "/redirect-warning/data?type=affix&code=my+portfolio"
+      "/redirect-warning/data?type=affix&code=my-portfolio"
     );
     assert.strictEqual(withoutUsername.text, JSON.stringify({ realUrl: null }));
   });

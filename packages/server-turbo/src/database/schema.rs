@@ -16,7 +16,7 @@ fn read(relative: &str) -> Result<String, CpeakError> {
 }
 
 // Drop order matters: child tables (with FKs) must be dropped before parents
-const DROP_ORDER: [&str; 9] = [
+const DROP_ORDER: [&str; 13] = [
     "views",
     "digit_codes",
     "ultra_codes",
@@ -25,12 +25,20 @@ const DROP_ORDER: [&str; 9] = [
     "usernames",
     "sessions",
     "rate_limits",
+    "email_rate_limits",
+    "login_rate_limits",
+    "email_codes",
+    "tokens",
     "users",
 ];
 
 // Create order matters: parent tables must exist before children reference them
-const CREATE_ORDER: [(&str, &str); 8] = [
+const CREATE_ORDER: [(&str, &str); 12] = [
     ("users", "tables/users.sql"),
+    ("tokens", "tables/tokens.sql"),
+    ("email_codes", "tables/email_codes.sql"),
+    ("email_rate_limits", "tables/email_rate_limits.sql"),
+    ("login_rate_limits", "tables/login_rate_limits.sql"),
     ("sessions", "tables/sessions.sql"),
     ("urls", "tables/urls.sql"),
     ("ultra_codes", "tables/ultra_codes.sql"),
@@ -181,7 +189,7 @@ pub async fn seed_codes(pool: &PgPool, opts: impl Into<Option<Opts>>) -> Result<
 // Note: ultra_codes rows are preserved but freed (url_id reset to NULL).
 pub async fn truncate_all(pool: &PgPool) -> Result<(), CpeakError> {
     sqlx::query(
-        "TRUNCATE views, digit_codes, ultra_codes, urls, sessions, usernames, rate_limits, users RESTART IDENTITY",
+        "TRUNCATE views, digit_codes, ultra_codes, urls, sessions, usernames, rate_limits, email_rate_limits, login_rate_limits, email_codes, tokens, users RESTART IDENTITY",
     )
     .execute(pool)
     .await?;

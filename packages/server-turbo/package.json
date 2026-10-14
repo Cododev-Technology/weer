@@ -4,7 +4,7 @@
   "description": "URL Shortner Application",
   "scripts": {
     "seed": "./env.sh cargo run --bin seed",
-    "test": "./env.sh DB_DATABASE=weer_test NODE_ENV=test cargo test",
+    "test": "./env.sh DB_DATABASE=weer_test NODE_ENV=test SKIP_EMAIL=true cargo test",
     "dev": "./env.sh cargo watch -x 'run --bin index'",
     "janitor": "./env.sh cargo run --bin janitor",
     "build": "cargo build --release",

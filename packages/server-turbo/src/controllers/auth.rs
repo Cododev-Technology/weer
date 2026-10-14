@@ -1,13 +1,39 @@
+use chrono::{TimeDelta, Utc};
 use cpeak::crypto::{hex_encode, random_bytes};
 use cpeak::{CookieOptions, CpeakError, CpeakRequest, CpeakResponse, SameSite, Value, json};
 use sqlx::FromRow;
+use subtle::ConstantTimeEq;
 
+use super::user::{is_username_available, is_valid_username_format};
+use crate::config::keys::KEYS;
 use crate::database::index::POOL;
 use crate::database::types::{ISession, IUser};
+use crate::lib::email::{Html, send_email};
+use crate::lib::email_codes::{code_text, verify_email_code};
 use crate::lib::google_oauth::exchange_code_for_profile;
+use crate::lib::rate_limit::{enforce_email_cooldown, enforce_ip_limit};
+use crate::lib::util;
+use crate::lib::validation::{is_valid_email, is_valid_name, is_valid_password};
 use crate::middlewares::session_token;
 
 const COOKIE_MAX_AGE: i64 = 30 * 24 * 60 * 60 * 1000; // 30 days
+const CODE_EXPIRY_MINUTES: i64 = 10;
+const RESET_LINK_EXPIRY_HOURS: i64 = 2;
+
+fn set_token_cookie(res: &mut CpeakResponse, token: &str) {
+    res.cookie(
+        "token",
+        token,
+        CookieOptions {
+            signed: true,
+            http_only: true,
+            same_site: Some(SameSite::Lax),
+            secure: std::env::var("NODE_ENV").as_deref() == Ok("production"),
+            max_age: Some(COOKIE_MAX_AGE),
+            ..Default::default()
+        },
+    );
+}
 
 pub async fn handle_oauth_callback(
     req: &mut CpeakRequest,
@@ -26,16 +52,36 @@ pub async fn handle_oauth_callback(
         .await?;
 
     if db_user.is_none() {
-        db_user = Some(
-            sqlx::query_as::<_, IUser>(
-                "INSERT INTO users(email, name, google_id) VALUES ($1, $2, $3) RETURNING *",
-            )
-            .bind(&profile.email)
-            .bind(&profile.name)
-            .bind(&profile.sub)
-            .fetch_one(&*POOL)
-            .await?,
-        );
+        // No Google-linked account yet. If a password account already exists for
+        // this email, link Google to it instead of erroring on the unique constraint.
+        let existing_by_email =
+            sqlx::query_as::<_, IUser>("SELECT id, google_id FROM users WHERE email=$1")
+                .bind(&profile.email)
+                .fetch_optional(&*POOL)
+                .await?;
+
+        match existing_by_email {
+            Some(existing_by_email) if existing_by_email.google_id.is_none() => {
+                sqlx::query("UPDATE users SET google_id = $1, verified = true WHERE id = $2")
+                    .bind(&profile.sub)
+                    .bind(existing_by_email.id)
+                    .execute(&*POOL)
+                    .await?;
+                db_user = Some(existing_by_email);
+            }
+            _ => {
+                db_user = Some(
+                    sqlx::query_as::<_, IUser>(
+                        "INSERT INTO users(email, name, google_id) VALUES ($1, $2, $3) RETURNING *",
+                    )
+                    .bind(&profile.email)
+                    .bind(&profile.name)
+                    .bind(&profile.sub)
+                    .fetch_one(&*POOL)
+                    .await?,
+                );
+            }
+        }
     }
 
     let Some(db_user) = db_user else {
@@ -81,7 +127,17 @@ pub async fn handle_oauth_callback(
     res.redirect("/")
 }
 
-pub async fn log_out(_req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result<(), CpeakError> {
+pub async fn log_out(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result<(), CpeakError> {
+    let token = req
+        .signed_cookies
+        .get("token")
+        .cloned()
+        .flatten()
+        .filter(|token| !token.is_empty());
+    if let Some(token) = token {
+        req.logout(&token).await?;
+        res.clear_cookie("token", None);
+    }
     res.clear_cookie("uid", None);
     res.redirect("/")
 }
@@ -192,4 +248,366 @@ pub async fn check_auth_status(
 
         res.json(json!({ "isSignedIn": false }))
     }
+}
+
+// Sends a 5-digit code to the given email to verify ownership before creating an account
+pub async fn send_code(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result<(), CpeakError> {
+    let name = req.body["name"].as_str().unwrap_or_default();
+    let email = req.body["email"].as_str().unwrap_or_default();
+    let password = req.body["password"].as_str().unwrap_or_default();
+    let username = req.body["username"]
+        .as_str()
+        .filter(|username| !username.is_empty());
+
+    if !is_valid_name(name) {
+        return Err(CpeakError::new(400, "Please enter a valid name."));
+    }
+    if !is_valid_email(email) {
+        return Err(CpeakError::new(400, "Please enter a valid email address."));
+    }
+    if !is_valid_password(password) {
+        return Err(CpeakError::new(
+            400,
+            "Password must be 8-30 characters and include an uppercase letter, a lowercase letter, and a number.",
+        ));
+    }
+
+    let normalized_email = email.to_lowercase();
+
+    let existing = sqlx::query_as::<_, IUser>("SELECT id, google_id FROM users WHERE email = $1")
+        .bind(&normalized_email)
+        .fetch_optional(&*POOL)
+        .await?;
+
+    if existing.is_some() {
+        return Err(CpeakError::new(
+            409,
+            "You already have an account with us. Please login instead.",
+        ));
+    }
+
+    if let Some(username) = username
+        && (!is_valid_username_format(username) || !is_username_available(username).await?)
+    {
+        return Err(CpeakError::new(409, "Username is not available."));
+    }
+
+    enforce_email_cooldown(&normalized_email).await?;
+
+    if let Some(ip) = util::get_client_ip(req) {
+        enforce_ip_limit(&ip).await?;
+    }
+
+    let code: i32 = rand::random_range(10000..100000);
+
+    sqlx::query("DELETE FROM email_codes WHERE email = $1")
+        .bind(&normalized_email)
+        .execute(&*POOL)
+        .await?;
+    sqlx::query("INSERT INTO email_codes (email, code, expires_at) VALUES ($1, $2, $3)")
+        .bind(&normalized_email)
+        .bind(code)
+        .bind(Utc::now() + TimeDelta::minutes(CODE_EXPIRY_MINUTES))
+        .execute(&*POOL)
+        .await?;
+
+    send_email(
+        &normalized_email,
+        "Verify your email address",
+        Html::Template {
+            html_file: "verify-email",
+            template_data: json!({
+                "title": "Verify your email address",
+                "code": code,
+                "expiresIn": format!("{CODE_EXPIRY_MINUTES} minutes"),
+            }),
+        },
+    )
+    .await?;
+
+    res.status(200)
+        .json(json!({ "message": "Verification code sent." }))
+}
+
+// Verifies the code and creates the account, then logs the user in
+pub async fn register(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result<(), CpeakError> {
+    let name = req.body["name"].as_str().unwrap_or_default().to_string();
+    let email = req.body["email"].as_str().unwrap_or_default();
+    let password = req.body["password"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
+    let code = code_text(&req.body["code"]);
+    let username = req.body["username"]
+        .as_str()
+        .filter(|username| !username.is_empty())
+        .map(String::from);
+
+    if !is_valid_name(&name) {
+        return Err(CpeakError::new(400, "Please enter a valid name."));
+    }
+    if !is_valid_email(email) {
+        return Err(CpeakError::new(400, "Please enter a valid email address."));
+    }
+    if !is_valid_password(&password) {
+        return Err(CpeakError::new(
+            400,
+            "Password must be 8-30 characters and include an uppercase letter, a lowercase letter, and a number.",
+        ));
+    }
+
+    let normalized_email = email.to_lowercase();
+
+    let existing = sqlx::query_as::<_, IUser>("SELECT id, google_id FROM users WHERE email = $1")
+        .bind(&normalized_email)
+        .fetch_optional(&*POOL)
+        .await?;
+
+    if existing.is_some() {
+        return Err(CpeakError::new(
+            409,
+            "You already have an account with us. Please login instead.",
+        ));
+    }
+
+    if let Some(username) = &username
+        && (!is_valid_username_format(username) || !is_username_available(username).await?)
+    {
+        return Err(CpeakError::new(409, "Username is not available."));
+    }
+
+    verify_email_code(&normalized_email, &code).await?;
+
+    let hash = req.hash_password(&password).await?;
+
+    let mut tx = POOL.begin().await?;
+    let inserted: Result<IUser, sqlx::Error> = async {
+        let user = sqlx::query_as::<_, IUser>(
+            "INSERT INTO users(name, email, password, verified) VALUES ($1, $2, $3, true) RETURNING *",
+        )
+        .bind(&name)
+        .bind(&normalized_email)
+        .bind(&hash)
+        .fetch_one(&mut *tx)
+        .await?;
+
+        if let Some(username) = &username {
+            let inserted = sqlx::query(
+                "INSERT INTO usernames (user_id, username, active) VALUES ($1, $2, true)",
+            )
+            .bind(user.id)
+            .bind(username.to_lowercase())
+            .execute(&mut *tx)
+            .await;
+            if let Err(e) = inserted
+                && !e
+                    .as_database_error()
+                    .is_some_and(|e| e.is_unique_violation())
+            {
+                return Err(e);
+            }
+        }
+
+        Ok(user)
+    }
+    .await;
+
+    let user = match inserted {
+        Ok(user) => {
+            tx.commit().await?;
+            user
+        }
+        Err(e) => {
+            tx.rollback().await?;
+            if e.as_database_error()
+                .is_some_and(|e| e.is_unique_violation())
+            {
+                return Err(CpeakError::new(
+                    409,
+                    "You already have an account with us. Please login instead.",
+                ));
+            }
+            return Err(e.into());
+        }
+    };
+
+    let token = req.login(&password, &hash, &user.id.to_string()).await?;
+
+    let Some(token) = token else {
+        return Err(CpeakError::new(
+            500,
+            "Something went wrong. Please try logging in.",
+        ));
+    };
+
+    set_token_cookie(res, &token);
+
+    res.status(201)
+        .json(json!({ "message": "Account created." }))
+}
+
+// Logs a user in with email + password
+pub async fn log_in(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result<(), CpeakError> {
+    let email = req.body["email"].as_str().unwrap_or_default();
+    let password = req.body["password"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
+
+    if email.is_empty() || password.is_empty() {
+        return Err(CpeakError::new(
+            400,
+            "Please enter your email and password.",
+        ));
+    }
+
+    let normalized_email = email.to_lowercase();
+
+    let user =
+        sqlx::query_as::<_, IUser>("SELECT id, password, google_id FROM users WHERE email = $1")
+            .bind(&normalized_email)
+            .fetch_optional(&*POOL)
+            .await?;
+
+    let hashed_password = user
+        .as_ref()
+        .and_then(|user| user.password.clone())
+        .filter(|password| !password.is_empty());
+
+    let (Some(user), Some(hashed_password)) = (user.as_ref(), hashed_password) else {
+        if user.is_some_and(|user| user.google_id.is_some()) {
+            return Err(CpeakError::new(
+                401,
+                "This account uses Google Sign-In. Continue with Google, or add a password from your Account settings after signing in.",
+            ));
+        }
+        return Err(CpeakError::new(401, "Incorrect email or password."));
+    };
+
+    let token = req
+        .login(&password, &hashed_password, &user.id.to_string())
+        .await?;
+
+    let Some(token) = token else {
+        return Err(CpeakError::new(401, "Incorrect email or password."));
+    };
+
+    set_token_cookie(res, &token);
+
+    res.json(json!({ "message": "Logged in." }))
+}
+
+// Sends a password reset link to the given email, whether the account already has a password or not
+pub async fn forgot_password(
+    req: &mut CpeakRequest,
+    res: &mut CpeakResponse,
+) -> Result<(), CpeakError> {
+    let email = req.body["email"].as_str().unwrap_or_default();
+    if email.is_empty() {
+        return Err(CpeakError::new(400, "Please enter your email."));
+    }
+
+    let normalized_email = email.to_lowercase();
+
+    let user = sqlx::query_as::<_, IUser>("SELECT id FROM users WHERE email = $1")
+        .bind(&normalized_email)
+        .fetch_optional(&*POOL)
+        .await?;
+
+    if let Some(user) = user {
+        enforce_email_cooldown(&normalized_email).await?;
+
+        if let Some(ip) = util::get_client_ip(req) {
+            enforce_ip_limit(&ip).await?;
+        }
+
+        let token = hex_encode(random_bytes(32));
+        let link = format!("{}/reset-password?t={token}&i={}", KEYS.domain, user.id);
+
+        sqlx::query("UPDATE users SET token_code = $1, token_date = $2 WHERE id = $3")
+            .bind(&token)
+            .bind(Utc::now())
+            .bind(user.id)
+            .execute(&*POOL)
+            .await?;
+
+        send_email(
+            &normalized_email,
+            "Reset your password",
+            Html::Template {
+                html_file: "reset-password",
+                template_data: json!({
+                    "title": "Reset your password",
+                    "link": link,
+                    "expiresIn": format!("{RESET_LINK_EXPIRY_HOURS} hours"),
+                }),
+            },
+        )
+        .await?;
+    }
+
+    res.status(200).json(json!({
+        "message": "If that email is registered, we've sent a reset link.",
+    }))
+}
+
+// Uses the token from the emailed reset link to set a new password
+pub async fn reset_password(
+    req: &mut CpeakRequest,
+    res: &mut CpeakResponse,
+) -> Result<(), CpeakError> {
+    // The link has the id as text (i=12), and the client can send it as text or as a number
+    let user_id = match &req.body["userId"] {
+        Value::Number(user_id) => user_id.as_i64().and_then(|id| i32::try_from(id).ok()),
+        Value::String(user_id) => user_id.parse::<i32>().ok(),
+        _ => None,
+    };
+    let token = req.body["token"].as_str().unwrap_or_default();
+    let new_password = req.body["newPassword"].as_str().unwrap_or_default();
+
+    let Some(user_id) = user_id.filter(|_| !token.is_empty() && is_valid_password(new_password))
+    else {
+        return Err(CpeakError::new(400, "Please provide a valid new password."));
+    };
+
+    let user = sqlx::query_as::<_, IUser>("SELECT token_code, token_date FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_optional(&*POOL)
+        .await?;
+
+    let Some((token_code, token_date)) = user.and_then(|user| {
+        let token_code = user.token_code.filter(|token_code| !token_code.is_empty());
+        token_code.zip(user.token_date)
+    }) else {
+        return Err(CpeakError::new(400, "Invalid or expired link."));
+    };
+
+    let expiry = token_date + TimeDelta::hours(RESET_LINK_EXPIRY_HOURS);
+    if Utc::now() > expiry {
+        return Err(CpeakError::new(400, "This reset link has expired."));
+    }
+
+    let (token, stored_token) = (token.as_bytes(), token_code.as_bytes());
+    if token.len() != stored_token.len() || !bool::from(token.ct_eq(stored_token)) {
+        return Err(CpeakError::new(400, "Invalid or expired link."));
+    }
+
+    let hash = req.hash_password(new_password).await?;
+
+    sqlx::query(
+        "UPDATE users SET password = $1, token_code = NULL, token_date = NULL WHERE id = $2",
+    )
+    .bind(hash)
+    .bind(user_id)
+    .execute(&*POOL)
+    .await?;
+
+    // Revoke any existing logged-in sessions, since the requester may not be authenticated as this user
+    sqlx::query("DELETE FROM tokens WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&*POOL)
+        .await?;
+
+    res.status(200)
+        .json(json!({ "message": "Password updated. Please log in." }))
 }

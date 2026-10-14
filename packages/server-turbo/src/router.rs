@@ -20,14 +20,33 @@ pub fn api_router(app: &mut Cpeak) {
     // Check to see if a user is logged in or not. Return user data if logged in
     app.route("get", "/auth/status", auth::check_auth_status);
 
+    // Send a 5-digit code to verify an email before signup
+    app.route("post", "/auth/send-code", auth::send_code);
+
+    // Verify the code and create the account, then log the user in
+    app.route("post", "/auth/register", auth::register);
+
+    // Log in with email + password
+    app.route_with(
+        "post",
+        "/auth/login",
+        middlewares::rate_limit_login,
+        auth::log_in,
+    );
+
+    // Send a password reset link
+    app.route("post", "/auth/forgot-password", auth::forgot_password);
+
+    // Reset the password using the emailed link's token
+    app.route("patch", "/auth/reset-password", auth::reset_password);
+
     // ------------------------------------------------ //
     // ************ USER & ACCOUNT ROUTES ************* //
     // ------------------------------------------------ //
 
-    app.route_with(
+    app.route(
         "get",
         "/user/username-availability/:username",
-        middlewares::require_auth,
         user::check_username_availability,
     );
 
@@ -43,6 +62,30 @@ pub fn api_router(app: &mut Cpeak) {
         "/user/username/switch",
         middlewares::require_auth,
         user::switch_username,
+    );
+
+    // Send a 5-digit code to a new email address to confirm the change
+    app.route_with(
+        "post",
+        "/user/email/send-code",
+        middlewares::require_auth,
+        user::send_email_change_code,
+    );
+
+    // Confirm the code and apply the email change
+    app.route_with(
+        "patch",
+        "/user/email/confirm",
+        middlewares::require_auth,
+        user::confirm_email_change,
+    );
+
+    // Change password
+    app.route_with(
+        "patch",
+        "/user/password",
+        middlewares::require_auth,
+        user::change_password,
     );
 
     // ------------------------------------------------ //
@@ -65,7 +108,10 @@ pub fn api_router(app: &mut Cpeak) {
     app.route_with(
         "patch",
         "/url/:id/type",
-        middlewares::check_url_ownership,
+        (
+            middlewares::check_url_ownership,
+            middlewares::rate_limit_url,
+        ),
         url::change_url_type,
     );
 

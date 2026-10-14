@@ -8,12 +8,15 @@ import { createUser } from "./helpers/factories/user.js";
 import { getEmailCode, signUpAndLogIn } from "./helpers/factories/auth.js";
 
 describe("User Endpoints", () => {
-  it("should not let anonymous visitors use the username routes", async () => {
+  it("should not let anonymous visitors set or switch a username", async () => {
     const agent = request.agent(app);
     await agent.get("/auth/status");
 
+    // Checking if a username is available doesn't need an account
+    const availability = await agent.get("/user/username-availability/joe");
+    assert.strictEqual(availability.statusCode, 200);
+
     const responses = [
-      await agent.get("/user/username-availability/joe"),
       await agent.patch("/user/username").send({ username: "joe" }),
       await agent.patch("/user/username/switch").send({ username: "joe" }),
     ];

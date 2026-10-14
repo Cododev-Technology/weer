@@ -9,6 +9,8 @@ use crate::database::types::IUser;
 #[allow(dead_code)]
 const USER_LIFETIME_LIMIT: i32 = 100;
 const IP_BURST_LIMIT: i32 = 10; // per 10 minutes
+const EMAIL_BURST_LIMIT: i32 = 3; // per 5 minutes
+const LOGIN_BURST_LIMIT: i32 = 5; // per 10 minutes, per email attempted
 
 async fn enforce_user_limit(user_id: i32) -> Result<(), CpeakError> {
     let link_credits = sqlx::query_scalar::<_, i32>(
@@ -27,7 +29,16 @@ async fn enforce_user_limit(user_id: i32) -> Result<(), CpeakError> {
     Ok(())
 }
 
-async fn enforce_ip_limit(ip: &str) -> Result<(), CpeakError> {
+// Refunds a credit spent by enforceUserLimit when the operation it was gating ultimately failed.
+pub async fn refund_user_credit(user_id: i32) -> Result<(), CpeakError> {
+    sqlx::query("UPDATE users SET link_credits = link_credits + 1 WHERE id = $1")
+        .bind(user_id)
+        .execute(&*POOL)
+        .await?;
+    Ok(())
+}
+
+pub async fn enforce_ip_limit(ip: &str) -> Result<(), CpeakError> {
     let burst_count = sqlx::query_scalar::<_, i32>(
         "
     INSERT INTO rate_limits (ip_address, burst_count, burst_reset_at)
@@ -46,6 +57,54 @@ async fn enforce_ip_limit(ip: &str) -> Result<(), CpeakError> {
         return Err(CpeakError::new(
             429,
             "Too many requests. Please try again later.",
+        ));
+    }
+    Ok(())
+}
+
+pub async fn enforce_email_cooldown(email: &str) -> Result<(), CpeakError> {
+    let burst_count = sqlx::query_scalar::<_, i32>(
+        "
+    INSERT INTO email_rate_limits (email, burst_count, burst_reset_at)
+    VALUES ($1, 1, now())
+    ON CONFLICT (email) DO UPDATE SET
+      burst_count = CASE WHEN email_rate_limits.burst_reset_at < now() - interval '5 minutes' THEN 1 ELSE email_rate_limits.burst_count + 1 END,
+      burst_reset_at = CASE WHEN email_rate_limits.burst_reset_at < now() - interval '5 minutes' THEN now() ELSE email_rate_limits.burst_reset_at END
+    RETURNING burst_count
+    ",
+    )
+    .bind(email)
+    .fetch_optional(&*POOL)
+    .await?;
+
+    if burst_count.unwrap_or(0) > EMAIL_BURST_LIMIT {
+        return Err(CpeakError::new(
+            429,
+            "Too many requests for this email. Please wait a few minutes and try again.",
+        ));
+    }
+    Ok(())
+}
+
+pub async fn enforce_login_rate_limit(email: &str) -> Result<(), CpeakError> {
+    let burst_count = sqlx::query_scalar::<_, i32>(
+        "
+    INSERT INTO login_rate_limits (email, burst_count, burst_reset_at)
+    VALUES ($1, 1, now())
+    ON CONFLICT (email) DO UPDATE SET
+      burst_count = CASE WHEN login_rate_limits.burst_reset_at < now() - interval '10 minutes' THEN 1 ELSE login_rate_limits.burst_count + 1 END,
+      burst_reset_at = CASE WHEN login_rate_limits.burst_reset_at < now() - interval '10 minutes' THEN now() ELSE login_rate_limits.burst_reset_at END
+    RETURNING burst_count
+    ",
+    )
+    .bind(email)
+    .fetch_optional(&*POOL)
+    .await?;
+
+    if burst_count.unwrap_or(0) > LOGIN_BURST_LIMIT {
+        return Err(CpeakError::new(
+            429,
+            "Too many login attempts for this account. Please wait a few minutes and try again.",
         ));
     }
     Ok(())

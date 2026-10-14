@@ -4,7 +4,8 @@ use url::{Host, Url};
 use crate::database::index::POOL;
 use crate::database::types::{ISession, IUrl, IUser};
 use crate::lib::domain_allowlist::is_allowlisted_domain;
-use crate::lib::rate_limit::enforce_rate_limit;
+use crate::lib::rate_limit::{enforce_ip_limit, enforce_login_rate_limit, enforce_rate_limit};
+use crate::lib::util;
 use crate::lib::web_risk::is_url_malicious;
 
 pub async fn is_valid_url(
@@ -160,6 +161,23 @@ pub async fn rate_limit_url(
     next: Next,
 ) -> Result<(), CpeakError> {
     enforce_rate_limit(req).await?;
+    next()
+}
+
+pub async fn rate_limit_login(
+    req: &mut CpeakRequest,
+    _res: &mut CpeakResponse,
+    next: Next,
+) -> Result<(), CpeakError> {
+    let email = req.body["email"].as_str().unwrap_or_default();
+    if !email.is_empty() {
+        enforce_login_rate_limit(&email.to_lowercase()).await?;
+    }
+
+    if let Some(ip) = util::get_client_ip(req) {
+        enforce_ip_limit(&ip).await?;
+    }
+
     next()
 }
 

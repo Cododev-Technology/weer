@@ -5,6 +5,7 @@
 
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::net::IpAddr;
 use std::sync::LazyLock;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
@@ -149,8 +150,9 @@ async fn drain_views_once() {
         #[allow(unused_variables)]
         let row_count = ids.len();
 
-        const COLUMNS: [&str; 6] = [
+        const COLUMNS: [&str; 7] = [
             "url_id",
+            "ip_address",
             "user_agent",
             "referrer",
             "link_type",
@@ -185,6 +187,11 @@ async fn drain_views_once() {
                     entry
                         .get("url_id")
                         .and_then(|url_id| url_id.parse::<i32>().ok()),
+                )
+                .bind(
+                    entry
+                        .get("ip_address")
+                        .and_then(|ip_address| ip_address.parse::<IpAddr>().ok()),
                 )
                 .bind(entry.get("user_agent").copied().unwrap_or(""))
                 .bind(entry.get("referrer").copied().unwrap_or(""))

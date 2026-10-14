@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   google_id VARCHAR(200),
   email VARCHAR(200),
   name VARCHAR(200),
-  password VARCHAR(200),
+  password TEXT,
   verified BOOLEAN,
 
   link_count INTEGER DEFAULT 0, -- number of URLs user has shortened. Includes deleted links and customization.

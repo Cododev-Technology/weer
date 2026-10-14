@@ -17,9 +17,10 @@ use crate::database::index::POOL;
 use crate::database::types::{ISession, IUrl, IUser, LinkType};
 use crate::lib::domain_allowlist::is_allowlisted_domain;
 use crate::lib::links::{
-    ProcessedCode, generate_classic, generate_digit, generate_qr_code, generate_ultra, process_code,
+    ProcessedCode, generate_classic, generate_digit, generate_qr_code, generate_ultra,
+    process_code, validate_affix_code, validate_custom_code,
 };
-use crate::lib::rate_limit::enforce_rate_limit;
+use crate::lib::rate_limit::refund_user_credit;
 use crate::lib::util::{self, to_iso_string};
 use crate::middlewares::session_token;
 use crate::redis::views_stream::{IViewEvent, push as push_view};
@@ -144,12 +145,6 @@ pub async fn get_urls(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result
     }))
 }
 
-/* @TODO clean this up */
-// The body of the request:
-//   url: string;
-//   type: LinkType;
-//   custom?: string; // only if type is custom or customOnUsername
-
 // Get the url, shorten it and save to database
 pub async fn shorten(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result<(), CpeakError> {
     // Get the user id if the user is logged in
@@ -199,35 +194,40 @@ pub async fn shorten(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result<
 
     let shortened_code;
     let mut expires_at = None;
+    let mut actual_type = r#type.clone();
 
     match r#type.as_str() {
         Some("classic") => match generate_classic(id).await {
             Ok(code) => shortened_code = code,
             Err(error) => {
-                // Delete the inserted URL record if we could not generate a code
+                // Delete the inserted URL record and refund the spent credit if we could not generate a code
                 sqlx::query("DELETE FROM urls WHERE id=$1")
                     .bind(inserted_url.id)
                     .execute(&*POOL)
                     .await?;
+                if let Some(user_id) = user_id {
+                    refund_user_credit(user_id).await?;
+                }
 
                 return Err(error);
             }
         },
         Some("ultra") => {
-            if req.get::<IUser>("user").is_none() {
+            let Some(user) = req.get::<IUser>("user") else {
                 return Err(CpeakError::new(401, "Unauthorized"));
-            }
+            };
             match generate_ultra(id).await {
                 Ok(obj) => {
                     expires_at = obj.expires_at;
                     shortened_code = obj.code;
                 }
                 Err(error) => {
-                    // Delete the inserted URL record if we could not generate a code
+                    // Delete the inserted URL record and refund the spent credit if we could not generate a code
                     sqlx::query("DELETE FROM urls WHERE id=$1")
                         .bind(inserted_url.id)
                         .execute(&*POOL)
                         .await?;
+                    refund_user_credit(user.id).await?;
 
                     return Err(error);
                 }
@@ -242,12 +242,16 @@ pub async fn shorten(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result<
                 if error.status == Some(503) {
                     // All digit codes exhausted — fall back to classic
                     shortened_code = generate_classic(id).await?;
+                    actual_type = json!("classic");
                 } else {
-                    // Delete the inserted URL record if we could not generate a code
+                    // Delete the inserted URL record and refund the spent credit if we could not generate a code
                     sqlx::query("DELETE FROM urls WHERE id=$1")
                         .bind(inserted_url.id)
                         .execute(&*POOL)
                         .await?;
+                    if let Some(user_id) = user_id {
+                        refund_user_credit(user_id).await?;
+                    }
 
                     return Err(error);
                 }
@@ -260,7 +264,7 @@ pub async fn shorten(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result<
     res.json(json!({
         "URLId": inserted_url.id,
         "realURL": real_url,
-        "linkType": r#type,
+        "linkType": actual_type,
         "code": shortened_code,
         "expiresAt": expires_at.map(to_iso_string),
     }))
@@ -280,8 +284,24 @@ pub async fn change_url_type(
             .json(json!({ "message": "Missing parameters" }));
     }
 
-    enforce_rate_limit(req).await?;
+    match change_url_type_internal(req, res, id, new_type).await {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            // rate_limit_url already spent a credit for this, refund it on error
+            if let Some(user) = req.get::<IUser>("user") {
+                refund_user_credit(user.id).await?;
+            }
+            Err(error)
+        }
+    }
+}
 
+async fn change_url_type_internal(
+    req: &mut CpeakRequest,
+    res: &mut CpeakResponse,
+    id: i32,
+    new_type: Value,
+) -> Result<(), CpeakError> {
     // ------- 1. Clean up the old code ------- //
 
     // First find the current url type and release the current code
@@ -354,7 +374,16 @@ pub async fn change_url_type(
                 return Err(CpeakError::new(401, "Unauthorized"));
             };
             let affix_code = req.body["code"].as_str();
-            /* @todo validate the affixCode */
+
+            let Some(code) = affix_code.filter(|code| !code.is_empty()) else {
+                return Err(CpeakError::new(400, "No code provided"));
+            };
+            if !validate_affix_code(code) {
+                return Err(CpeakError::new(
+                    400,
+                    "Affix code must be 1-80 characters and contain only letters, numbers, hyphens, and underscores.",
+                ));
+            }
 
             let available = is_affix_available(affix_code, Some(user.id)).await?;
             if !available {
@@ -382,7 +411,16 @@ pub async fn change_url_type(
         }
         Some("custom") => {
             let custom_code = req.body["code"].as_str();
-            /* @todo validate the customCode */
+
+            let Some(code) = custom_code.filter(|code| !code.is_empty()) else {
+                return Err(CpeakError::new(400, "No code provided"));
+            };
+            if !validate_custom_code(code) {
+                return Err(CpeakError::new(
+                    400,
+                    "Custom code must be 7-80 characters, contain only letters, numbers, hyphens, and underscores, and cannot be a reserved word.",
+                ));
+            }
 
             let available = is_custom_available(custom_code).await?;
             if !available {
@@ -518,6 +556,8 @@ async fn resolve_url_record(
 /* @TODO FIX ERROR RETURN IN CPEAK SEND FILE */
 // Redirect to the real url
 pub async fn redirect(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result<(), CpeakError> {
+    res.set_header("X-Robots-Tag", "noindex");
+
     let code = req.params.get("id").cloned().unwrap_or_default();
 
     if code.is_empty() {
@@ -529,6 +569,7 @@ pub async fn redirect(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result
 
     let Some(processed_code) = processed_code else {
         return res
+            .status(404)
             .send_file(&format!("{PUBLIC_PATH}/404.html"), "text/html")
             .await;
     };
@@ -537,6 +578,7 @@ pub async fn redirect(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result
 
     let Some(url) = url else {
         return res
+            .status(404)
             .send_file(&format!("{PUBLIC_PATH}/404.html"), "text/html")
             .await;
     };
@@ -570,6 +612,7 @@ pub async fn redirect(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result
         // This is to handle high traffic and avoid database overload during peak times.
         push_view(IViewEvent {
             url_id: url.id,
+            ip_address: ip,
             user_agent,
             referrer,
             link_type,

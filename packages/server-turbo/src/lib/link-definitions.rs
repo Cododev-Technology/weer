@@ -1,5 +1,19 @@
 use cpeak::crypto::base64url_encode;
 
+use super::validation::{AFFIX_CODE_MIN_LENGTH, CODE_MAX_LENGTH, CUSTOM_CODE_MIN_LENGTH};
+
+// Static top-level route segments registered in router.rs. A "custom" code or
+// a username occupying these would collide with a real route.
+pub const RESERVED_ROUTE_SEGMENTS: [&str; 7] = [
+    "auth",
+    "logout",
+    "user",
+    "url",
+    "qr",
+    "q",
+    "redirect-warning",
+];
+
 // The properties of a type of link whose codes we generate ourselves
 pub struct Link {
     pub characters: &'static str,
@@ -11,7 +25,13 @@ pub struct Link {
     pub valid_for: Option<i64>,
 }
 
-pub struct Empty {}
+// The properties of a type of link whose codes the user picks
+pub struct Picked {
+    pub min_length: usize,
+    pub max_length: usize,
+    pub requires_auth: bool,
+    pub reserved_words: &'static [&'static str],
+}
 
 pub struct Qr {
     // (the function that writes the random bytes as text)
@@ -24,8 +44,8 @@ pub struct Links {
     pub classic: Link,
     pub ultra: Link,
     pub digit: Link,
-    pub custom: Empty,
-    pub affix: Empty,
+    pub custom: Picked,
+    pub affix: Picked,
     pub qr: Qr,
 }
 
@@ -93,8 +113,18 @@ pub const LINKS: Links = Links {
         ],
         valid_for: Some(2 * 60 * 60 * 1000), // 2 hours in milliseconds
     },
-    custom: Empty {},
-    affix: Empty {},
+    custom: Picked {
+        min_length: CUSTOM_CODE_MIN_LENGTH,
+        max_length: CODE_MAX_LENGTH,
+        requires_auth: false,
+        reserved_words: &RESERVED_ROUTE_SEGMENTS,
+    },
+    affix: Picked {
+        min_length: AFFIX_CODE_MIN_LENGTH,
+        max_length: CODE_MAX_LENGTH,
+        requires_auth: true,
+        reserved_words: &[],
+    },
     qr: Qr {
         character_encoding: base64url_encode, // using base64url to avoid special characters
         length: 10,                           // 10 characters long when in base64url (7 bytes)

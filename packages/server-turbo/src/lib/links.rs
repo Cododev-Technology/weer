@@ -10,6 +10,7 @@ use cpeak::CpeakError;
 use cpeak::crypto::random_bytes;
 
 use super::link_definitions::LINKS;
+use super::validation::{is_valid_affix_code, is_valid_custom_code};
 use crate::database::index::POOL;
 use crate::database::types::{IUltraCode, LinkType};
 
@@ -65,7 +66,6 @@ pub fn process_code(
     url: Option<&str>,
 ) -> Option<ProcessedCode> {
     if username.is_some_and(|username| !username.is_empty()) && !code.is_empty() {
-        /* @todo clean up & validate code */
         // Affix type
         return Some(ProcessedCode {
             r#type: LinkType::Affix,
@@ -111,7 +111,6 @@ pub fn process_code(
             code: cleaned_code,
         })
     } else {
-        /* @todo clean up & validate code */
         // Finally, default to custom type
         Some(ProcessedCode {
             r#type: LinkType::Custom,
@@ -190,6 +189,24 @@ fn validate_digit_code(code: &str) -> bool {
     }
 
     true
+}
+
+pub fn validate_custom_code(code: &str) -> bool {
+    if !is_valid_custom_code(code) {
+        return false;
+    }
+    if LINKS
+        .custom
+        .reserved_words
+        .contains(&code.to_lowercase().as_str())
+    {
+        return false;
+    }
+    true
+}
+
+pub fn validate_affix_code(code: &str) -> bool {
+    is_valid_affix_code(code)
 }
 
 /**
@@ -342,7 +359,10 @@ pub async fn generate_ultra(id: i32) -> Result<GeneratedCode, CpeakError> {
 
     match generated {
         Ok(Some(generated)) => Ok(generated),
-        Ok(None) => Err(CpeakError::other("No ultra code is available right now")),
+        Ok(None) => Err(CpeakError::new(
+            503,
+            "All of our ultra codes are in use right now. Please check back in a few minutes.",
+        )),
         Err(error) => {
             if error
                 .as_database_error()

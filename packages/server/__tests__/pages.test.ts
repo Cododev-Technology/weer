@@ -70,7 +70,7 @@ describe("Pages and static files", () => {
     ];
 
     for (const res of responses) {
-      assert.strictEqual(res.statusCode, 200);
+      assert.strictEqual(res.statusCode, 404);
       assert.strictEqual(res.headers["content-type"], "text/html");
       assert.strictEqual(res.text, read("/404.html").toString());
     }

@@ -365,10 +365,10 @@ describe("Checking if a code is available", () => {
     const { agent, link } = await createAnonymousLink();
     await agent
       .patch(`/url/${link.URLId}/type`)
-      .send({ type: "custom", code: "my code/é" });
+      .send({ type: "custom", code: "my-code_1" });
 
     const res = await request(app).get(
-      "/url/custom-availability/my%20code%2F%C3%A9"
+      "/url/custom-availability/my%2Dcode%5F1"
     );
 
     assert.strictEqual(res.text, JSON.stringify({ available: false }));

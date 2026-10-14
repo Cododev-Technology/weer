@@ -6,6 +6,7 @@ use server_turbo::database::index::POOL;
 use server_turbo::database::types::{ISession, IUser};
 
 use crate::helpers::assert::{assert_made_of, time};
+use crate::helpers::factories::auth::{DEFAULT_PASSWORD, get_email_code, sign_up_and_log_in};
 use crate::helpers::factories::user::{create_user, log_in, sign_cookie};
 use crate::helpers::supertest::request;
 use crate::helpers::target::app;
@@ -315,4 +316,330 @@ mod auth_endpoints {
             assert!(res.set_cookie.is_empty());
         });
     }
+
+    #[test]
+    fn signs_a_user_up_verifies_their_email_and_logs_them_in_automatically() {
+        test(async {
+            let agent = request::agent(app());
+            let email = "signup-test@example.com";
+
+            sign_up_and_log_in(&agent, email).await;
+
+            let status_res = agent.get("/auth/status").await;
+            assert_eq!(status_res.body["isSignedIn"], true);
+            assert_eq!(status_res.body["email"], email);
+        });
+    }
+
+    #[test]
+    fn checks_username_availability_without_requiring_authentication() {
+        test(async {
+            let res = request(app())
+                .get("/user/username-availability/somebrandnewusername")
+                .await;
+            assert_eq!(res.status_code, 200);
+            assert_eq!(res.body["available"], true);
+        });
+    }
+
+    #[test]
+    fn signs_a_user_up_with_an_optional_username_and_sets_it_as_their_active_username() {
+        test(async {
+            let agent = request::agent(app());
+            let email = "signup-username-test@example.com";
+            let username = "signupuser";
+
+            agent
+                .post("/auth/send-code")
+                .send(json!({
+                    "name": "Test User",
+                    "email": email,
+                    "password": DEFAULT_PASSWORD,
+                    "username": username,
+                }))
+                .await;
+            let code = get_email_code(email).await;
+            let res = agent
+                .post("/auth/register")
+                .send(json!({
+                    "name": "Test User",
+                    "email": email,
+                    "password": DEFAULT_PASSWORD,
+                    "code": code,
+                    "username": username,
+                }))
+                .await;
+            assert_eq!(res.status_code, 201);
+
+            let status_res = agent.get("/auth/status").await;
+            let active = status_res.body["usernames"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|u| u["active"] == true);
+            assert_eq!(active.map(|u| &u["value"]), Some(&json!(username)));
+        });
+    }
+
+    #[test]
+    fn rejects_signup_with_a_username_that_is_already_taken() {
+        test(async {
+            let owner_agent = request::agent(app());
+            let owner_email = "username-owner@example.com";
+            let username = "takenusername";
+
+            owner_agent
+                .post("/auth/send-code")
+                .send(json!({
+                    "name": "Username Owner",
+                    "email": owner_email,
+                    "password": DEFAULT_PASSWORD,
+                    "username": username,
+                }))
+                .await;
+            owner_agent
+                .post("/auth/register")
+                .send(json!({
+                    "name": "Username Owner",
+                    "email": owner_email,
+                    "password": DEFAULT_PASSWORD,
+                    "code": get_email_code(owner_email).await,
+                    "username": username,
+                }))
+                .await;
+
+            let res = request(app())
+                .post("/auth/send-code")
+                .send(json!({
+                    "name": "Someone Else",
+                    "email": "different-email@example.com",
+                    "password": DEFAULT_PASSWORD,
+                    "username": username,
+                }))
+                .await;
+
+            assert_eq!(res.status_code, 409);
+        });
+    }
+
+    #[test]
+    fn rejects_signup_for_an_email_already_registered_with_a_password() {
+        test(async {
+            let email = "dup-test@example.com";
+            sign_up_and_log_in(&request::agent(app()), email).await;
+
+            let res = request(app())
+                .post("/auth/send-code")
+                .send(json!({ "name": "Dup Again", "email": email, "password": DEFAULT_PASSWORD }))
+                .await;
+
+            assert_eq!(res.status_code, 409);
+        });
+    }
+
+    #[test]
+    fn rejects_signup_for_an_email_already_tied_to_a_google_account() {
+        test(async {
+            let email = "google-user@example.com";
+            sqlx::query("INSERT INTO users(email, name, google_id) VALUES ($1, $2, $3)")
+                .bind(email)
+                .bind("Google User")
+                .bind("fake-sub-1")
+                .execute(&*POOL)
+                .await
+                .unwrap();
+
+            let res = request(app())
+                .post("/auth/send-code")
+                .send(json!({ "name": "Someone", "email": email, "password": DEFAULT_PASSWORD }))
+                .await;
+
+            assert_eq!(res.status_code, 409);
+            assert!(
+                res.body["error"]
+                    .as_str()
+                    .unwrap()
+                    .to_lowercase()
+                    .contains("already have an account")
+            );
+        });
+    }
+
+    #[test]
+    fn locks_out_after_5_wrong_verification_code_attempts() {
+        test(async {
+            let email = "lockout-test@example.com";
+            request(app())
+                .post("/auth/send-code")
+                .send(json!({ "name": "Lockout", "email": email, "password": DEFAULT_PASSWORD }))
+                .await;
+
+            let mut status_code = 0;
+            for _ in 0..5 {
+                let res = request(app())
+                    .post("/auth/register")
+                    .send(json!({
+                        "name": "Lockout",
+                        "email": email,
+                        "password": DEFAULT_PASSWORD,
+                        "code": "00000",
+                    }))
+                    .await;
+                status_code = res.status_code;
+            }
+            assert_eq!(status_code, 429);
+
+            let after_lockout = request(app())
+                .post("/auth/register")
+                .send(json!({
+                    "name": "Lockout",
+                    "email": email,
+                    "password": DEFAULT_PASSWORD,
+                    "code": "00000",
+                }))
+                .await;
+            assert_eq!(after_lockout.status_code, 400);
+        });
+    }
+
+    #[test]
+    fn rejects_login_with_an_incorrect_password() {
+        test(async {
+            let email = "login-test@example.com";
+            sign_up_and_log_in(&request::agent(app()), email).await;
+
+            let res = request(app())
+                .post("/auth/login")
+                .send(json!({ "email": email, "password": "WrongPassword1" }))
+                .await;
+
+            assert_eq!(res.status_code, 401);
+        });
+    }
+
+    #[test]
+    fn resets_a_forgotten_password_via_the_emailed_token() {
+        test(async {
+            let email = "reset-test@example.com";
+            let user_id = sign_up_and_log_in(&request::agent(app()), email).await;
+
+            request(app())
+                .post("/auth/forgot-password")
+                .send(json!({ "email": email }))
+                .await;
+
+            let user = sqlx::query_as::<_, IUser>("SELECT token_code FROM users WHERE id = $1")
+                .bind(user_id)
+                .fetch_one(&*POOL)
+                .await
+                .unwrap();
+
+            let reset_res = request(app())
+                .patch("/auth/reset-password")
+                .send(json!({
+                    "userId": user_id,
+                    "token": user.token_code,
+                    "newPassword": "NewPassword456",
+                }))
+                .await;
+            assert_eq!(reset_res.status_code, 200);
+
+            let login_res = request(app())
+                .post("/auth/login")
+                .send(json!({ "email": email, "password": "NewPassword456" }))
+                .await;
+            assert_eq!(login_res.status_code, 200);
+
+            let old_login_res = request(app())
+                .post("/auth/login")
+                .send(json!({ "email": email, "password": DEFAULT_PASSWORD }))
+                .await;
+            assert_eq!(old_login_res.status_code, 401);
+        });
+    }
+
+    #[test]
+    fn lets_a_google_only_account_set_a_password_via_forgot_password_without_breaking_google_login()
+    {
+        test(async {
+            let email = "google-forgot-password-test@example.com";
+
+            // The account that logging in with Google makes. (The Node.js version goes through
+            // the Google OAuth callback, with a fake fetch() for Google's API.)
+            sqlx::query("INSERT INTO users(email, name, google_id) VALUES ($1, $2, $3)")
+                .bind(email)
+                .bind("Google Only")
+                .bind("fake-sub-google-only")
+                .execute(&*POOL)
+                .await
+                .unwrap();
+
+            let forgot_res = request(app())
+                .post("/auth/forgot-password")
+                .send(json!({ "email": email }))
+                .await;
+            assert_eq!(forgot_res.status_code, 200);
+
+            let user =
+                sqlx::query_as::<_, IUser>("SELECT id, token_code FROM users WHERE email = $1")
+                    .bind(email)
+                    .fetch_one(&*POOL)
+                    .await
+                    .unwrap();
+            assert!(
+                user.token_code.is_some(),
+                "expected a reset token to be issued for a Google-only account"
+            );
+
+            let reset_res = request(app())
+                .patch("/auth/reset-password")
+                .send(json!({
+                    "userId": user.id,
+                    "token": user.token_code,
+                    "newPassword": "GoogleOnlyPass456",
+                }))
+                .await;
+            assert_eq!(reset_res.status_code, 200);
+
+            let login_res = request(app())
+                .post("/auth/login")
+                .send(json!({ "email": email, "password": "GoogleOnlyPass456" }))
+                .await;
+            assert_eq!(login_res.status_code, 200);
+
+            let still_google_linked =
+                sqlx::query_as::<_, IUser>("SELECT google_id FROM users WHERE email = $1")
+                    .bind(email)
+                    .fetch_one(&*POOL)
+                    .await
+                    .unwrap();
+            assert_eq!(
+                still_google_linked.google_id.as_deref(),
+                Some("fake-sub-google-only")
+            );
+        });
+    }
+
+    #[test]
+    fn enforces_a_per_email_cooldown_on_repeated_code_sends() {
+        test(async {
+            let email = "cooldown-test@example.com";
+
+            let mut status_code = 0;
+            for _ in 0..4 {
+                let res = request(app())
+                    .post("/auth/send-code")
+                    .send(
+                        json!({ "name": "Cooldown", "email": email, "password": DEFAULT_PASSWORD }),
+                    )
+                    .await;
+                status_code = res.status_code;
+            }
+            assert_eq!(status_code, 429);
+        });
+    }
+
+    // "links a Google login to an existing password account with the same email" is only in
+    // the Node.js suite: it goes through the Google OAuth callback with a fake fetch() for
+    // Google's API, and nothing in here can stand in for Google that way.
 }

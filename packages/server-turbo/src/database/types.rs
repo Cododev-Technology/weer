@@ -67,6 +67,10 @@ pub struct IUser {
     pub token_date: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
+    // Not a column. On req.user, the id of the token of a user who logged in with their email
+    // and password (req.user.tokenId in the Node.js version).
+    #[sqlx(skip)]
+    pub token_id: Option<String>,
 }
 
 #[derive(Debug, Clone, FromRow)]
@@ -74,6 +78,40 @@ pub struct IRateLimit {
     pub ip_address: IpAddr,
     pub burst_count: i32,
     pub burst_reset_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, FromRow)]
+pub struct IEmailRateLimit {
+    pub email: String,
+    pub burst_count: i32,
+    pub burst_reset_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, FromRow)]
+pub struct ILoginRateLimit {
+    pub email: String,
+    pub burst_count: i32,
+    pub burst_reset_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Default, FromRow)]
+#[sqlx(default)]
+pub struct IToken {
+    pub id: String,
+    pub user_id: i32,
+    pub expires_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Default, FromRow)]
+#[sqlx(default)]
+pub struct IEmailCode {
+    pub id: i32,
+    pub email: String,
+    pub code: i32,
+    pub attempts: i32,
+    pub expires_at: DateTime<Utc>,
+    pub created_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Default, FromRow)]

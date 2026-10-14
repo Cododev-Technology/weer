@@ -219,15 +219,15 @@ mod redirecting_to_the_real_url {
             let link = create_link(&agent, "classic", OTHER_URL).await;
             agent
                 .patch(&format!("/url/{}/type", link["URLId"]))
-                .send(json!({ "type": "custom", "code": "My own code & more" }))
+                .send(json!({ "type": "custom", "code": "My-own-code_and-more" }))
                 .await;
 
-            let res = request(app()).get("/My%20own%20code%20%26%20more").await;
+            let res = request(app()).get("/My-own-code_and-more").await;
 
             assert_eq!(res.status_code, 302);
             assert_eq!(
                 res.header("location"),
-                Some("/redirect-warning?type=custom&code=My+own+code+%26+more")
+                Some("/redirect-warning?type=custom&code=My-own-code_and-more")
             );
         });
     }
@@ -266,7 +266,7 @@ mod redirecting_to_the_real_url {
             for path in ["/other/portfolio", "/nobody/portfolio"] {
                 let not_found = request(app()).get(path).await;
 
-                assert_eq!(not_found.status_code, 200, "{path}");
+                assert_eq!(not_found.status_code, 404, "{path}");
                 assert_eq!(not_found.text, page("/404.html"));
             }
         });
@@ -296,7 +296,7 @@ mod redirecting_to_the_real_url {
             for path in ["/nope12", "/zz", "/12345", "/not-a-code", "/q/nope", "/a$"] {
                 let res = request(app()).get(path).await;
 
-                assert_eq!(res.status_code, 200, "{path}");
+                assert_eq!(res.status_code, 404, "{path}");
                 assert!(res.header("content-type").unwrap().starts_with("text/html"));
                 assert_eq!(res.text, page("/404.html"));
             }
@@ -437,12 +437,12 @@ mod the_redirect_warning_page {
             let link = create_link(&agent, "classic", OTHER_URL).await;
             agent
                 .patch(&format!("/url/{}/type", link["URLId"]))
-                .send(json!({ "type": "affix", "code": "my portfolio" }))
+                .send(json!({ "type": "affix", "code": "my-portfolio" }))
                 .await;
             let qr_code_id = qr_code_id(&link).await;
 
             let affix = request(app())
-                .get("/redirect-warning/data?type=affix&code=my+portfolio&username=joe")
+                .get("/redirect-warning/data?type=affix&code=my-portfolio&username=joe")
                 .await;
             assert_eq!(affix.text, json!({ "realUrl": OTHER_URL }).to_string());
 
@@ -453,7 +453,7 @@ mod the_redirect_warning_page {
 
             // An affix link is nothing without its username
             let without_username = request(app())
-                .get("/redirect-warning/data?type=affix&code=my+portfolio")
+                .get("/redirect-warning/data?type=affix&code=my-portfolio")
                 .await;
             assert_eq!(
                 without_username.text,

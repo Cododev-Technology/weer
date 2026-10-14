@@ -1,14 +1,15 @@
 use std::sync::LazyLock;
-use std::time::Instant;
+use std::time::{Instant, SystemTime};
 
+use chrono::{DateTime, Utc};
 use cpeak::{
-    CompressionOptions, CookieParserOptions, Cpeak, CpeakOptions, cookie_parser, json, parse_json,
-    serve_static,
+    AuthOptions, CompressionOptions, CookieParserOptions, Cpeak, CpeakOptions, FindToken,
+    RevokeToken, SaveToken, TokenRecord, auth, cookie_parser, json, parse_json, serve_static,
 };
 
 use crate::config::keys::KEYS;
 use crate::database::index::POOL;
-use crate::database::types::IUser;
+use crate::database::types::{IToken, IUser};
 use crate::lib::log::log;
 use crate::redis::redis::REDIS;
 use crate::router::api_router;
@@ -50,12 +51,54 @@ pub fn app() -> Cpeak {
         std::process::exit(1);
     }
 
+    if KEYS.token_secret.is_empty() || KEYS.token_secret.chars().count() < 32 {
+        println!(
+            "You must set a token secret in config/keys.rs file and it must be at least 32 characters long."
+        );
+        std::process::exit(1);
+    }
+
     // Cookie parsing with signed cookie support
     app.before_each(cookie_parser(CookieParserOptions {
         secret: Some(KEYS.cookie_key.clone()),
     }));
 
-    // Restore req.user from signed uid cookie on every request
+    // For authentication
+    app.before_each(auth(AuthOptions {
+        secret: KEYS.token_secret.clone(),
+        token_expiry: 30 * 24 * 60 * 60 * 1000, // 30 days
+        save_token: SaveToken::new(async |token_id, user_id, expires_at| {
+            sqlx::query("INSERT INTO tokens (id, user_id, expires_at) VALUES ($1, $2, $3)")
+                .bind(token_id)
+                .bind(user_id.parse::<i32>().unwrap_or_default())
+                .bind(DateTime::<Utc>::from(expires_at))
+                .execute(&*POOL)
+                .await?;
+            Ok(())
+        }),
+        find_token: FindToken::new(async |token_id| {
+            let row =
+                sqlx::query_as::<_, IToken>("SELECT user_id, expires_at FROM tokens WHERE id = $1")
+                    .bind(token_id)
+                    .fetch_optional(&*POOL)
+                    .await?;
+            Ok(row.map(|row| TokenRecord {
+                user_id: row.user_id.to_string(),
+                expires_at: SystemTime::from(row.expires_at),
+            }))
+        }),
+        revoke_token: Some(RevokeToken::new(async |token_id| {
+            sqlx::query("DELETE FROM tokens WHERE id = $1")
+                .bind(token_id)
+                .execute(&*POOL)
+                .await?;
+            Ok(())
+        })),
+        ..Default::default()
+    }));
+
+    // Restore req.user from the signed uid cookie (Google OAuth), Falls back to
+    // the email/password auth when uid isn't present
     app.before_each(async |req, _res, next| {
         let uid = req.signed_cookies.get("uid").cloned().flatten();
         if let Some(id) = uid.and_then(|uid| uid.parse().ok()) {
@@ -66,7 +109,28 @@ pub fn app() -> Cpeak {
                     ..Default::default()
                 },
             );
+            return next();
         }
+
+        let token = req
+            .signed_cookies
+            .get("token")
+            .cloned()
+            .flatten()
+            .filter(|token| !token.is_empty());
+        if let Some(token) = token
+            && let Some(result) = req.verify_token(&token).await?
+        {
+            req.set(
+                "user",
+                IUser {
+                    id: result.user_id.parse().unwrap_or_default(),
+                    token_id: token.split('.').next().map(String::from),
+                    ..Default::default()
+                },
+            );
+        }
+
         next()
     });
 
@@ -112,12 +176,18 @@ pub fn app() -> Cpeak {
             .await
     });
 
+    app.route("get", "/reset-password", async |_req, res| {
+        res.send_file(&format!("{PUBLIC_PATH}/index.html"), "text/html")
+            .await
+    });
+
     // ------ API Routes ------ //
     api_router(&mut app);
 
     // Send 404 page for any route nothing else matched
     app.fallback(async |_req, res| {
-        res.send_file(&format!("{PUBLIC_PATH}/404.html"), "text/html")
+        res.status(404)
+            .send_file(&format!("{PUBLIC_PATH}/404.html"), "text/html")
             .await
     });
 

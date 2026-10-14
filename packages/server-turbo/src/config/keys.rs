@@ -13,7 +13,10 @@ pub struct Keys {
     pub google_client_id: String,
     pub google_client_secret: String,
     pub cookie_key: String,
+    pub token_secret: String,
     pub web_risk_api_key: String,
+    pub ses_region: String,
+    pub ses_from_email: String,
     // Postgres
     pub db_user: String,
     pub db_host: String,
@@ -30,7 +33,10 @@ pub static KEYS: LazyLock<Keys> = LazyLock::new(|| Keys {
     google_client_id: get_env("GOOGLE_CLIENT_ID"),
     google_client_secret: get_env("GOOGLE_CLIENT_SECRET"),
     cookie_key: get_env("COOKIE_KEY"),
+    token_secret: get_env("TOKEN_SECRET"),
     web_risk_api_key: get_env("WEB_RISK_API_KEY"),
+    ses_region: get_env("AWS_REGION"),
+    ses_from_email: get_env("SES_FROM_EMAIL"),
     // Postgres
     db_user: get_env("DB_USER"),
     db_host: get_env("DB_HOST"),

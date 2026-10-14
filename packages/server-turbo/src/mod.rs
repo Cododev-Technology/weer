@@ -30,6 +30,10 @@ pub mod database {
 pub mod lib {
     #[path = "domain-allowlist.rs"]
     pub mod domain_allowlist;
+    #[path = "email/index.rs"]
+    pub mod email;
+    #[path = "email-codes.rs"]
+    pub mod email_codes;
     #[path = "google-oauth.rs"]
     pub mod google_oauth;
     #[path = "link-definitions.rs"]
@@ -39,6 +43,7 @@ pub mod lib {
     #[path = "rate-limit.rs"]
     pub mod rate_limit;
     pub mod util;
+    pub mod validation;
     #[path = "web-risk.rs"]
     pub mod web_risk;
 }
