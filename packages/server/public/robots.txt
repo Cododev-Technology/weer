@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /auth/
+Disallow: /logout
+Disallow: /user/
+Disallow: /url
+Disallow: /qr/
+Disallow: /redirect-warning
+
+Sitemap: https://weer.pro/sitemap.xml

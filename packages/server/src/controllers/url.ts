@@ -15,13 +15,15 @@ import util from "../lib/util.js";
 import { push as pushView } from "../redis/views-stream.js";
 import keys from "../config/keys.js";
 import { isAllowlistedDomain } from "../lib/domain-allowlist.js";
-import { enforceRateLimit } from "../lib/rate-limit.js";
+import { refundUserCredit } from "../lib/rate-limit.js";
 import {
   generateClassic,
   generateUltra,
   generateDigit,
   generateQRCode,
   processCode,
+  validateCustomCode,
+  validateAffixCode,
 } from "../lib/links.js";
 
 const publicPath = new URL("../../public", import.meta.url).pathname;
@@ -101,15 +103,8 @@ const getUrls = async (req: Request, res: Response) => {
   });
 };
 
-/** @TODO clean this up */
-interface IRequestBody {
-  url: string;
-  type: LinkType;
-  custom?: string; // only if type is custom or customOnUsername
-}
-
 // Get the url, shorten it and save to database
-const shorten = async (req: Request<IRequestBody>, res: Response) => {
+const shorten = async (req: Request<API.Url.ShortenBody>, res: Response) => {
   // Get the user id if the user is logged in
   let userId = req.user ? req.user.id : null;
 
@@ -147,14 +142,16 @@ const shorten = async (req: Request<IRequestBody>, res: Response) => {
 
   let shortenedCode;
   let expiresAt;
+  let actualType: LinkType = type;
 
   switch (type) {
     case "classic":
       try {
         shortenedCode = await generateClassic(insertedUrl!.id);
       } catch (error) {
-        // Delete the inserted URL record if we could not generate a code
+        // Delete the inserted URL record and refund the spent credit if we could not generate a code
         await DB.delete<IUrl>("urls", `id=$1`, [insertedUrl!.id]);
+        if (req.user) await refundUserCredit(req.user.id);
 
         throw error;
       }
@@ -166,8 +163,9 @@ const shorten = async (req: Request<IRequestBody>, res: Response) => {
         expiresAt = obj.expiresAt;
         shortenedCode = obj.code;
       } catch (error) {
-        // Delete the inserted URL record if we could not generate a code
+        // Delete the inserted URL record and refund the spent credit if we could not generate a code
         await DB.delete<IUrl>("urls", `id=$1`, [insertedUrl!.id]);
+        await refundUserCredit(req.user.id);
 
         throw error;
       }
@@ -181,9 +179,11 @@ const shorten = async (req: Request<IRequestBody>, res: Response) => {
         if (error?.status === 503) {
           // All digit codes exhausted — fall back to classic
           shortenedCode = await generateClassic(insertedUrl!.id);
+          actualType = "classic";
         } else {
-          // Delete the inserted URL record if we could not generate a code
+          // Delete the inserted URL record and refund the spent credit if we could not generate a code
           await DB.delete<IUrl>("urls", `id=$1`, [insertedUrl!.id]);
+          if (req.user) await refundUserCredit(req.user.id);
 
           throw error;
         }
@@ -197,14 +197,14 @@ const shorten = async (req: Request<IRequestBody>, res: Response) => {
   return res.json({
     URLId: insertedUrl!.id,
     realURL: realUrl,
-    linkType: type,
+    linkType: actualType,
     code: shortenedCode,
     expiresAt: expiresAt || null,
   });
 };
 
 // Change the type of a url (e.g. from classic to custom). User can do this from the customization modal
-const changeUrlType = async (req: Request, res: Response) => {
+const changeUrlType = async (req: Request<API.Url.ChangeTypeBody>, res: Response) => {
   const id = Number(req.params?.id);
   const newType = req.body?.type as LinkType;
 
@@ -212,8 +212,21 @@ const changeUrlType = async (req: Request, res: Response) => {
     return res.status(400).json({ message: "Missing parameters" });
   }
 
-  await enforceRateLimit(req);
+  try {
+    return await changeUrlTypeInternal(req, res, id, newType);
+  } catch (error) {
+    // rateLimitUrl already spent a credit for this, refund it on error
+    if (req.user) await refundUserCredit(req.user.id);
+    throw error;
+  }
+};
 
+const changeUrlTypeInternal = async (
+  req: Request<API.Url.ChangeTypeBody>,
+  res: Response,
+  id: number,
+  newType: LinkType
+) => {
   // ------- 1. Clean up the old code ------- //
 
   // First find the current url type and release the current code
@@ -289,7 +302,15 @@ const changeUrlType = async (req: Request, res: Response) => {
     case "affix": {
       if (!req.user) throw { status: 401, message: "Unauthorized" };
       const affixCode = req.body?.code;
-      /** @todo validate the affixCode */
+
+      if (!affixCode) throw { status: 400, message: "No code provided" };
+      if (!validateAffixCode(affixCode)) {
+        throw {
+          status: 400,
+          message:
+            "Affix code must be 1-80 characters and contain only letters, numbers, hyphens, and underscores.",
+        };
+      }
 
       const available = await isAffixAvailable(affixCode, req.user.id);
       if (!available) {
@@ -318,7 +339,15 @@ const changeUrlType = async (req: Request, res: Response) => {
     }
     case "custom": {
       const customCode = req.body?.code;
-      /** @todo validate the customCode */
+
+      if (!customCode) throw { status: 400, message: "No code provided" };
+      if (!validateCustomCode(customCode)) {
+        throw {
+          status: 400,
+          message:
+            "Custom code must be 7-80 characters, contain only letters, numbers, hyphens, and underscores, and cannot be a reserved word.",
+        };
+      }
 
       const available = await isCustomAvailable(customCode);
       if (!available) {
@@ -427,6 +456,8 @@ async function resolveUrlRecord(
 /** @TODO FIX ERROR RETURN IN CPEAK SEND FILE */
 // Redirect to the real url
 const redirect = async (req: Request, res: Response) => {
+  res.setHeader("X-Robots-Tag", "noindex");
+
   const code = req.params?.id;
 
   if (!code) {
@@ -436,13 +467,17 @@ const redirect = async (req: Request, res: Response) => {
   const processedCode = processCode(code, req.params?.username, req.url);
 
   if (!processedCode) {
-    return res.sendFile(path.join(publicPath, "./404.html"), "text/html");
+    return res
+      .status(404)
+      .sendFile(path.join(publicPath, "./404.html"), "text/html");
   }
 
   const url = await resolveUrlRecord(processedCode, req.params?.username);
 
   if (!url) {
-    return res.sendFile(path.join(publicPath, "./404.html"), "text/html");
+    return res
+      .status(404)
+      .sendFile(path.join(publicPath, "./404.html"), "text/html");
   }
 
   /** Handling the views logic */
@@ -603,7 +638,7 @@ const checkCustomAvailability = async (req: Request, res: Response) => {
 };
 
 // Update the destination URL of an existing shortened link
-const updateRealUrl = async (req: Request, res: Response) => {
+const updateRealUrl = async (req: Request<API.Url.UpdateRealUrlBody>, res: Response) => {
   const id = Number(req.params?.id);
   const newRealUrl = req.body?.url;
 

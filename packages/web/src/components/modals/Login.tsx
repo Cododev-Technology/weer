@@ -1,16 +1,37 @@
-import React, { FC } from "react";
+import React, { FC, useState } from "react";
 
 import { Modal, Input, Button } from "@weer/reusable";
 import { useAuth } from "../../AuthContext";
-import dom from "../../lib/dom";
+import { useModal } from "../../ModalContext";
+import lib from "../../lib";
 
 interface LoginProps {
   open: boolean;
   onClose: () => void;
+  prefillEmail?: string;
 }
 
 const Login: FC<LoginProps> = (props) => {
-  const { isSignedIn, username } = useAuth();
+  const { logIn, refreshAuth } = useAuth();
+  const { openModal, closeModal } = useModal();
+
+  const [email, setEmail] = useState(props.prefillEmail || "");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const onSubmit = async () => {
+    if (!email || !password) return;
+
+    setLoading(true);
+    try {
+      await logIn(email, password);
+      await refreshAuth();
+      closeModal();
+    } catch (error: any) {
+      lib.handleErr(error);
+    }
+    setLoading(false);
+  };
 
   return (
     <Modal
@@ -20,13 +41,32 @@ const Login: FC<LoginProps> = (props) => {
       type="narrow"
     >
       <div className="auth">
-        <form action="">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit();
+          }}
+        >
           <div className="form-group">
-            <Input label="Email" type="email" id="email" required />
+            <Input
+              label="Email"
+              type="email"
+              id="email"
+              required
+              value={email}
+              onChange={setEmail}
+            />
           </div>
 
           <div className="form-group">
-            <Input label="Password" type="password" id="password" required />
+            <Input
+              label="Password"
+              type="password"
+              id="password"
+              required
+              value={password}
+              onChange={setPassword}
+            />
           </div>
 
           <div className="form-group u-flex-text-right">
@@ -35,9 +75,8 @@ const Login: FC<LoginProps> = (props) => {
               color="blue"
               outlined={true}
               block={true}
-              onClick={() => {
-                dom.message("Feature coming soon.", "default");
-              }}
+              loading={loading}
+              onClick={onSubmit}
             >
               Log In
             </Button>
@@ -57,21 +96,14 @@ const Login: FC<LoginProps> = (props) => {
         <div className="auth__footer">
           <button
             className="button-text"
-            onClick={() => {
-              dom.message("Feature coming soon.", "default");
-            }}
+            onClick={() => openModal("forgotPassword")}
           >
             Forgot your password?
           </button>
 
           <div className="auth__other">
             New to Weer?{" "}
-            <button
-              className="button-text"
-              onClick={() => {
-                dom.message("Feature coming soon.", "default");
-              }}
-            >
+            <button className="button-text" onClick={() => openModal("signUp")}>
               Create an account
             </button>
           </div>

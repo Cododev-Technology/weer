@@ -35,3 +35,38 @@
 .auth-or::after {
   margin-left: 1rem;
 }
+
+.verify-code-intro {
+  margin: 0 0 2rem;
+}
+
+.verify-code-actions {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+
+  .button {
+    margin-bottom: 1rem;
+  }
+}
+
+.input-digits {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    height: 5rem;
+    text-align: center;
+    font-size: 2rem;
+    border: 1px solid $color-grey-light-3;
+    border-radius: 6px;
+
+    &:focus {
+      outline: none;
+      border: 2px solid $color-blue;
+    }
+  }
+}

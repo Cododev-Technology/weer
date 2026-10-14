@@ -9,7 +9,8 @@ import type { IUser, IUrl, ISession } from "./database/types.js";
 import keys from "./config/keys.js";
 import { isAllowlistedDomain } from "./lib/domain-allowlist.js";
 import { isUrlMalicious } from "./lib/web-risk.js";
-import { enforceRateLimit } from "./lib/rate-limit.js";
+import { enforceRateLimit, enforceLoginRateLimit, enforceIpLimit } from "./lib/rate-limit.js";
+import util from "./lib/util.js";
 
 interface Middlewares {
   isValidURL: RouteMiddleware;
@@ -17,6 +18,7 @@ interface Middlewares {
   requireAuth: RouteMiddleware;
   checkUrlSafety: RouteMiddleware;
   rateLimitUrl: RouteMiddleware;
+  rateLimitLogin: RouteMiddleware;
 }
 
 function isValidURL(req: Request, res: Response, next: Next) {
@@ -125,12 +127,23 @@ async function rateLimitUrl(req: Request, res: Response, next: Next) {
   next();
 }
 
+async function rateLimitLogin(req: Request, res: Response, next: Next) {
+  const email = (req.body as { email?: string })?.email;
+  if (email) await enforceLoginRateLimit(email.toLowerCase());
+
+  const ip = util.getClientIp(req);
+  if (ip) await enforceIpLimit(ip);
+
+  next();
+}
+
 const middlewares: Middlewares = {
   isValidURL,
   checkUrlOwnership,
   requireAuth,
   checkUrlSafety,
   rateLimitUrl,
+  rateLimitLogin,
 };
 
 export default middlewares;

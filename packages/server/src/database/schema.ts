@@ -20,12 +20,20 @@ const DROP_ORDER = [
   "usernames",
   "sessions",
   "rate_limits",
+  "email_rate_limits",
+  "login_rate_limits",
+  "email_codes",
+  "tokens",
   "users",
 ];
 
 // Create order matters: parent tables must exist before children reference them
 const CREATE_ORDER: Array<[name: string, file: string]> = [
   ["users", "tables/users.sql"],
+  ["tokens", "tables/tokens.sql"],
+  ["email_codes", "tables/email_codes.sql"],
+  ["email_rate_limits", "tables/email_rate_limits.sql"],
+  ["login_rate_limits", "tables/login_rate_limits.sql"],
   ["sessions", "tables/sessions.sql"],
   ["urls", "tables/urls.sql"],
   ["ultra_codes", "tables/ultra_codes.sql"],
@@ -142,7 +150,7 @@ export async function seedCodes(pool: Pool, opts: { verbose?: boolean } = {}) {
 // Note: ultra_codes rows are preserved but freed (url_id reset to NULL).
 export async function truncateAll(pool: Pool) {
   await pool.query(
-    `TRUNCATE views, digit_codes, ultra_codes, urls, sessions, usernames, rate_limits, users RESTART IDENTITY`,
+    `TRUNCATE views, digit_codes, ultra_codes, urls, sessions, usernames, rate_limits, email_rate_limits, login_rate_limits, email_codes, tokens, users RESTART IDENTITY`,
   );
   // ultra_codes is pre-seeded reference data — restore it after truncation
   await seedCodes(pool);

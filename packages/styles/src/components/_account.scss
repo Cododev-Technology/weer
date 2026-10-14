@@ -1,5 +1,23 @@
 @use "../abstracts/variables" as *;
 
+.account-modal {
+  &__divider {
+    border: none;
+    border-top: 1px solid $color-grey-light-3;
+    margin: 2rem 0;
+  }
+
+  &__code-actions {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+
+    .button {
+      margin-bottom: 1rem;
+    }
+  }
+}
+
 .account-credits {
   &__header {
     display: flex;

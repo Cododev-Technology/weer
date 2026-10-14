@@ -13,6 +13,10 @@ import EditRealUrlModal from "./EditRealUrl";
 import LinkStatsModal from "./LinkStats";
 import AccountModal from "./AccountModal";
 import CreditsModal from "./CreditsModal";
+import SignUpModal from "./SignUp";
+import VerifyEmailModal from "./VerifyEmail";
+import ForgotPasswordModal from "./ForgotPassword";
+import ResetPasswordModal from "./ResetPassword";
 
 interface GlobalModalRendererProps {
   modal: { type: string | null; props?: Record<string, any> };
@@ -38,7 +42,44 @@ export const GlobalModalRenderer = ({
       );
 
     case "login":
-      return <LoginModal open onClose={closeModal} />;
+      return <LoginModal open onClose={closeModal} prefillEmail={modal.props?.email} />;
+
+    case "signUp":
+      return (
+        <SignUpModal
+          open
+          onClose={closeModal}
+          initialName={modal.props?.name}
+          initialEmail={modal.props?.email}
+          initialUsername={modal.props?.username}
+          initialPassword={modal.props?.password}
+        />
+      );
+
+    case "verifyEmail":
+      return (
+        <VerifyEmailModal
+          open
+          onClose={closeModal}
+          name={modal.props?.name}
+          email={modal.props?.email}
+          password={modal.props?.password}
+          username={modal.props?.username}
+        />
+      );
+
+    case "forgotPassword":
+      return <ForgotPasswordModal open onClose={closeModal} />;
+
+    case "resetPassword":
+      return (
+        <ResetPasswordModal
+          open
+          onClose={closeModal}
+          token={modal.props?.token}
+          userId={modal.props?.userId}
+        />
+      );
 
     case "username":
       return <Username open onClose={closeModal} />;

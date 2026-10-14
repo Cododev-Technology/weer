@@ -11,7 +11,10 @@ export default {
   googleClientID: getEnv("GOOGLE_CLIENT_ID"),
   googleClientSecret: getEnv("GOOGLE_CLIENT_SECRET"),
   cookieKey: getEnv("COOKIE_KEY"),
+  tokenSecret: getEnv("TOKEN_SECRET"),
   webRiskApiKey: getEnv("WEB_RISK_API_KEY"),
+  sesRegion: getEnv("AWS_REGION"),
+  sesFromEmail: getEnv("SES_FROM_EMAIL"),
   // Postgres
   dbUser: getEnv("DB_USER"),
   dbHost: getEnv("DB_HOST"),

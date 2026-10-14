@@ -31,10 +31,12 @@
 
   &__icon-left {
     margin-right: 0.5rem;
+    line-height: 0;
   }
 
   &__icon-right {
     margin-left: 0.5rem;
+    line-height: 0;
   }
 
   &-rounded {
@@ -43,6 +45,66 @@
 
   &-block {
     width: 100%;
+  }
+}
+
+.button-default {
+  $base: rgb(239, 239, 239);
+
+  background: $base;
+  color: $color-text;
+  border: 1px solid $base;
+
+  &:hover {
+    background-color: color.adjust($base, $lightness: -8%);
+    border-color: color.adjust($base, $lightness: -8%);
+    color: $color-text;
+  }
+
+  &:focus {
+    box-shadow: 0 0 0 3px rgba($color-text, 0.3);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    background: #ebebe4;
+    border-color: #ccc;
+    color: #757575;
+
+    &:hover {
+      background: #ebebe4;
+      border-color: #ccc;
+      color: #757575;
+    }
+  }
+
+  &-outlined {
+    $base: rgb(239, 239, 239);
+
+    background-color: transparent;
+    color: $color-text;
+    border: 1px solid $base;
+
+    &:hover,
+    &:active {
+      background-color: $base;
+      color: $color-text;
+    }
+
+    &:focus {
+      box-shadow: 0 0 0 3px rgba($color-text, 0.3);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      border-color: color.adjust($base, $lightness: -10%);
+      background-color: #fff;
+      color: color.adjust($color-text, $lightness: 20%);
+
+      &:hover {
+        border-color: color.adjust($base, $lightness: -10%);
+      }
+    }
   }
 }
 
@@ -267,7 +329,7 @@
   background: #d73d32;
   color: #fff;
   display: flex;
-  padding: 1rem 3rem;
+  padding: 2.2rem 3rem;
 
   &:hover {
     background: #c2362c;

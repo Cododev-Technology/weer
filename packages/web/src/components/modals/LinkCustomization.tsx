@@ -2,6 +2,11 @@ import React, { FC, useEffect, useState, useMemo, useRef } from "react";
 
 import { ConfirmModal, Loading, Modal, Button, Input } from "@weer/reusable";
 import type { LinkType } from "@weer/common";
+import {
+  stripInvalidCodeChars,
+  CUSTOM_CODE_MIN_LENGTH,
+  CODE_MAX_LENGTH,
+} from "@weer/common";
 import { useAuth } from "../../AuthContext";
 import { useModal } from "../../ModalContext";
 import dom from "../../lib/dom";
@@ -163,11 +168,9 @@ const LinkCustomization: FC<LinkCustomizationProps> = (props) => {
     // convert spaces to hyphens
     value = value.replace(/\s+/g, "-");
 
-    const regex = /[^a-zA-Z0-9-_]/g;
-    if (regex.test(value)) {
+    const sanitizedValue = stripInvalidCodeChars(value);
+    if (sanitizedValue !== value) {
       // invalid characters found
-      const sanitizedValue = value.replace(regex, "");
-
       dom.message(
         "Only letters (a-z), numbers (0-9), hyphens (-) and underscores (_) are allowed.",
         "error"
@@ -178,6 +181,14 @@ const LinkCustomization: FC<LinkCustomizationProps> = (props) => {
     }
 
     setAffixCode(value);
+
+    if (value.length > CODE_MAX_LENGTH) {
+      return setAffixInputError(
+        `Affix code must be at most ${CODE_MAX_LENGTH} characters long.`
+      );
+    }
+
+    setAffixInputError("");
 
     // Now checking availability
     if (affixTimer.current) clearTimeout(affixTimer.current);
@@ -237,11 +248,9 @@ const LinkCustomization: FC<LinkCustomizationProps> = (props) => {
     // convert spaces to hyphens
     value = value.replace(/\s+/g, "-");
 
-    const regex = /[^a-zA-Z0-9-_]/g;
-    if (regex.test(value)) {
+    const sanitizedValue = stripInvalidCodeChars(value);
+    if (sanitizedValue !== value) {
       // invalid characters found
-      const sanitizedValue = value.replace(regex, "");
-
       dom.message(
         "Only letters (a-z), numbers (0-9), hyphens (-) and underscores (_) are allowed.",
         "error"
@@ -254,9 +263,13 @@ const LinkCustomization: FC<LinkCustomizationProps> = (props) => {
 
     setCustomCode(value);
 
-    if (value.length < 7) {
+    if (value.length < CUSTOM_CODE_MIN_LENGTH) {
       return setCustomInputError(
-        "Custom code must be at least 7 characters long."
+        `Custom code must be at least ${CUSTOM_CODE_MIN_LENGTH} characters long.`
+      );
+    } else if (value.length > CODE_MAX_LENGTH) {
+      return setCustomInputError(
+        `Custom code must be at most ${CODE_MAX_LENGTH} characters long.`
       );
     } else {
       setCustomInputError("");

@@ -15,6 +15,7 @@ import type {
 import crypto from "crypto";
 import { LINKS } from "./link-definitions.js";
 import type { LinkType } from "@weer/common";
+import { isValidCustomCode, isValidAffixCode } from "@weer/common";
 
 const MAX_ATTEMPTS = 10; // Max number of retries for generating unique IDs (QR Code and Shortened URL id)
 
@@ -43,7 +44,6 @@ export const processCode = (
   url?: string
 ): { type: LinkType; code: string } | null => {
   if (username && code.length > 0) {
-    /** @todo clean up & validate code */
     // Affix type
     return { type: "affix", code };
   }
@@ -68,7 +68,6 @@ export const processCode = (
     if (!validateDigitCode(cleanedCode)) return null;
     return { type: "digit", code: cleanedCode };
   } else {
-    /** @todo clean up & validate code */
     // Finally, default to custom type
     return { type: "custom", code };
   }
@@ -144,6 +143,14 @@ const validateDigitCode = (code: string): boolean => {
 
   return true;
 };
+
+export const validateCustomCode = (code: string): boolean => {
+  if (!isValidCustomCode(code)) return false;
+  if (LINKS.custom.reservedWords.includes(code.toLowerCase())) return false;
+  return true;
+};
+
+export const validateAffixCode = (code: string): boolean => isValidAffixCode(code);
 
 /**
  * Generates a unique "classic" type shortened URL ID for the given database URL ID.
@@ -259,6 +266,14 @@ export const generateUltra = async (id: number) => {
       `,
       [id, LINKS.ultra.validFor]
     );
+
+    if (result.length === 0) {
+      throw {
+        status: 503,
+        message:
+          "All of our ultra codes are in use right now. Please check back in a few minutes.",
+      };
+    }
 
     // Update the URL record to set its link_type
     await DB.update<IUrl>(

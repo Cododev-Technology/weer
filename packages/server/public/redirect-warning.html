@@ -51,9 +51,8 @@
               <div class="lds-ellipsis--light"></div>
               <div class="lds-ellipsis--light"></div>
               <div class="lds-ellipsis--light"></div>
-              <div class="lds-ellipsis--light"></div>
-            </div></span
-          >
+              <div class="lds-ellipsis--light"></div></div
+          ></span>
           <p class="redirect-warning-card__sub" id="message">
             You will be automatically redirected to the link above in
             <span id="countdown">8</span>s&hellip;
@@ -62,14 +61,14 @@
             <button
               type="button"
               id="cancel-btn"
-              class="button button-with-icon button-red-outlined button-rounded"
+              class="button button-red-outlined button-rounded"
             >
               Cancel<i class="fa-solid fa-xmark button__icon-right"></i>
             </button>
             <a
               id="continue-link"
-              class="button button-with-icon button-blue button-rounded"
-              rel="noopener noreferrer"
+              class="button button-blue button-rounded"
+              rel="nofollow noopener noreferrer"
               >Open link now<i
                 class="fa-solid fa-arrow-right button__icon-right"
               ></i
@@ -80,83 +79,81 @@
     </div>
 
     <script>
-    (async () => {
-      const ledeEl = document.getElementById("lede");
-      const destinationEl = document.getElementById("destination");
-      const messageEl = document.getElementById("message");
-      const countdownEl = document.getElementById("countdown");
-      const actionsEl = document.getElementById("actions");
-      const continueLink = document.getElementById("continue-link");
-      const cancelBtn = document.getElementById("cancel-btn");
+      (async () => {
+        const ledeEl = document.getElementById("lede");
+        const destinationEl = document.getElementById("destination");
+        const messageEl = document.getElementById("message");
+        const countdownEl = document.getElementById("countdown");
+        const actionsEl = document.getElementById("actions");
+        const continueLink = document.getElementById("continue-link");
+        const cancelBtn = document.getElementById("cancel-btn");
 
-      let realUrl = "";
-      try {
-        const res = await fetch("/redirect-warning/data" + location.search);
-        const data = await res.json();
-        realUrl = data.realUrl || "";
-      } catch (e) {
-        realUrl = "";
-      }
+        let realUrl = "";
+        try {
+          const res = await fetch("/redirect-warning/data" + location.search);
+          const data = await res.json();
+          realUrl = data.realUrl || "";
+        } catch (e) {
+          realUrl = "";
+        }
 
-      if (!realUrl) {
-        ledeEl.textContent = "Link not found";
-        destinationEl.textContent =
-          "This link could not be found or is no longer available.";
-        messageEl.remove();
-        actionsEl.remove();
-      } else {
-        destinationEl.textContent = realUrl;
-        continueLink.href = realUrl;
+        if (!realUrl) {
+          ledeEl.textContent = "Link not found";
+          destinationEl.textContent =
+            "This link could not be found or is no longer available.";
+          messageEl.remove();
+          actionsEl.remove();
+        } else {
+          destinationEl.textContent = realUrl;
+          continueLink.href = realUrl;
 
-        const COUNTDOWN_SECONDS = 8;
-        let secondsLeft = COUNTDOWN_SECONDS;
-        countdownEl.textContent = secondsLeft;
+          const COUNTDOWN_SECONDS = 8;
+          let secondsLeft = COUNTDOWN_SECONDS;
+          countdownEl.textContent = secondsLeft;
 
-        const timer = setInterval(() => {
-          secondsLeft -= 1;
+          const timer = setInterval(() => {
+            secondsLeft -= 1;
 
-          if (secondsLeft <= 0) {
+            if (secondsLeft <= 0) {
+              clearInterval(timer);
+              window.location.href = realUrl;
+            } else {
+              countdownEl.textContent = secondsLeft;
+            }
+          }, 1000);
+
+          cancelBtn.addEventListener("click", () => {
             clearInterval(timer);
-            window.location.href = realUrl;
-          } else {
-            countdownEl.textContent = secondsLeft;
-          }
-        }, 1000);
 
-        cancelBtn.addEventListener("click", () => {
-          clearInterval(timer);
+            messageEl.textContent = "Want to still open the link above?";
+            actionsEl.innerHTML = "";
 
-          messageEl.textContent = "Want to still open the link above?";
-          actionsEl.innerHTML = "";
+            const closeBtn = document.createElement("button");
+            closeBtn.type = "button";
+            closeBtn.className = "button button-red-outlined button-rounded";
+            closeBtn.innerHTML =
+              'Close<i class="fa-solid fa-xmark button__icon-right"></i>';
+            closeBtn.addEventListener("click", () => {
+              window.close();
 
-          const closeBtn = document.createElement("button");
-          closeBtn.type = "button";
-          closeBtn.className =
-            "button button-with-icon button-red-outlined button-rounded";
-          closeBtn.innerHTML =
-            'Close<i class="fa-solid fa-xmark button__icon-right"></i>';
-          closeBtn.addEventListener("click", () => {
-            window.close();
+              // Go to home page if page cannot be closed
+              setTimeout(() => {
+                window.location.href = "/";
+              }, 300);
+            });
 
-            // Go to home page if page cannot be closed
-            setTimeout(() => {
-              window.location.href = "/";
-            }, 300);
+            const goLink = document.createElement("a");
+            goLink.className = "button button-blue button-rounded";
+            goLink.rel = "noopener noreferrer";
+            goLink.href = realUrl;
+            goLink.innerHTML =
+              'Go to link<i class="fa-solid fa-arrow-right button__icon-right"></i>';
+
+            actionsEl.appendChild(closeBtn);
+            actionsEl.appendChild(goLink);
           });
-
-          const goLink = document.createElement("a");
-          goLink.className =
-            "button button-with-icon button-blue button-rounded";
-          goLink.rel = "noopener noreferrer";
-          goLink.href = realUrl;
-          goLink.innerHTML =
-            'Go to link<i class="fa-solid fa-arrow-right button__icon-right"></i>';
-
-          actionsEl.appendChild(closeBtn);
-          actionsEl.appendChild(goLink);
-        });
-      }
-    })();
+        }
+      })();
     </script>
   </body>
 </html>

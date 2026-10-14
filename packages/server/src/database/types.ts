@@ -8,7 +8,11 @@ export type TTables =
   | "digit_codes"
   | "usernames"
   | "views"
-  | "rate_limits";
+  | "rate_limits"
+  | "tokens"
+  | "email_codes"
+  | "email_rate_limits"
+  | "login_rate_limits";
 
 export interface IUser {
   id: number;
@@ -19,8 +23,8 @@ export interface IUser {
   password?: string;
   verified?: boolean;
   link_credits?: number;
-  token_code?: string;
-  token_date?: Date;
+  token_code?: string | null;
+  token_date?: Date | null;
   updated_at: Date;
   created_at: Date;
 }
@@ -29,6 +33,34 @@ export interface IRateLimit {
   ip_address: string;
   burst_count: number;
   burst_reset_at: Date;
+}
+
+export interface IEmailRateLimit {
+  email: string;
+  burst_count: number;
+  burst_reset_at: Date;
+}
+
+export interface ILoginRateLimit {
+  email: string;
+  burst_count: number;
+  burst_reset_at: Date;
+}
+
+export interface IToken {
+  id: string;
+  user_id: number;
+  expires_at: Date;
+  created_at: Date;
+}
+
+export interface IEmailCode {
+  id: number;
+  email: string;
+  code: number;
+  attempts: number;
+  expires_at: Date;
+  created_at: Date;
 }
 
 export interface IUsername {

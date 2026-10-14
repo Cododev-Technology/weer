@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "seed": "./env.sh tsx ./src/database/seed.ts",
-    "test": "./env.sh DB_DATABASE=weer_test NODE_ENV=test mocha",
+    "test": "./env.sh DB_DATABASE=weer_test NODE_ENV=test SKIP_EMAIL=true mocha",
     "dev": "./env.sh tsx watch ./src/index.ts",
     "dev-inspect": "./env.sh tsx --inspect ./src/index.ts",
     "janitor": "./env.sh tsx ./src/janitor.ts",
@@ -18,10 +18,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.1042.0",
     "@types/qrcode": "^1.5.5",
     "@weer/common": "1.0.0",
     "compression": "^1.7.4",
-    "cpeak": "2.9.0",
+    "cpeak": "2.9.2",
     "helmet": "^8.1.0",
     "ioredis": "^5.10.1",
     "pg": "^8.16.3",

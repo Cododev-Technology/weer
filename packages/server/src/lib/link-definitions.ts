@@ -1,4 +1,21 @@
 import type { LinkType } from "@weer/common";
+import {
+  CUSTOM_CODE_MIN_LENGTH,
+  AFFIX_CODE_MIN_LENGTH,
+  CODE_MAX_LENGTH,
+} from "@weer/common";
+
+// Static top-level route segments registered in router.ts. A "custom" code or
+// a username occupying these would collide with a real route.
+export const RESERVED_ROUTE_SEGMENTS = [
+  "auth",
+  "logout",
+  "user",
+  "url",
+  "qr",
+  "q",
+  "redirect-warning",
+];
 
 /** @TODO maybe send this data to client for the customization model to show the data dynamically */
 // This should be our single source of truth for link types and their properties
@@ -66,8 +83,17 @@ export const LINKS: Record<LinkType, any> = {
     },
     validFor: 2 * 60 * 60 * 1000, // 2 hours in milliseconds
   },
-  custom: {},
-  affix: {},
+  custom: {
+    minLength: CUSTOM_CODE_MIN_LENGTH,
+    maxLength: CODE_MAX_LENGTH,
+    requiresAuth: false,
+    reservedWords: RESERVED_ROUTE_SEGMENTS,
+  },
+  affix: {
+    minLength: AFFIX_CODE_MIN_LENGTH,
+    maxLength: CODE_MAX_LENGTH,
+    requiresAuth: true,
+  },
   qr: {
     characterEncoding: "base64url", // using base64url to avoid special characters
     length: 10, // 10 characters long when in base64url (7 bytes)

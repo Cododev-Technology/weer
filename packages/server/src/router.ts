@@ -26,6 +26,21 @@ export default (app: Cpeak) => {
   // Check to see if a user is logged in or not. Return user data if logged in
   app.route("get", "/auth/status", Auth.checkAuthStatus);
 
+  // Send a 5-digit code to verify an email before signup
+  app.route("post", "/auth/send-code", Auth.sendCode);
+
+  // Verify the code and create the account, then log the user in
+  app.route("post", "/auth/register", Auth.register);
+
+  // Log in with email + password
+  app.route("post", "/auth/login", middlewares.rateLimitLogin, Auth.logIn);
+
+  // Send a password reset link
+  app.route("post", "/auth/forgot-password", Auth.forgotPassword);
+
+  // Reset the password using the emailed link's token
+  app.route("patch", "/auth/reset-password", Auth.resetPassword);
+
   // ------------------------------------------------ //
   // ************ USER & ACCOUNT ROUTES ************* //
   // ------------------------------------------------ //
@@ -33,7 +48,6 @@ export default (app: Cpeak) => {
   app.route(
     "get",
     "/user/username-availability/:username",
-    middlewares.requireAuth,
     User.checkUsernameAvailability
   );
 
@@ -51,6 +65,30 @@ export default (app: Cpeak) => {
     User.switchUsername
   );
 
+  // Send a 5-digit code to a new email address to confirm the change
+  app.route(
+    "post",
+    "/user/email/send-code",
+    middlewares.requireAuth,
+    User.sendEmailChangeCode
+  );
+
+  // Confirm the code and apply the email change
+  app.route(
+    "patch",
+    "/user/email/confirm",
+    middlewares.requireAuth,
+    User.confirmEmailChange
+  );
+
+  // Change password
+  app.route(
+    "patch",
+    "/user/password",
+    middlewares.requireAuth,
+    User.changePassword
+  );
+
   // ------------------------------------------------ //
   // ************ URL ROUTES ************* //
   // ------------------------------------------------ //
@@ -59,7 +97,7 @@ export default (app: Cpeak) => {
   app.route("post", "/url", middlewares.isValidURL, middlewares.checkUrlSafety, middlewares.rateLimitUrl, Url.shorten);
 
   // Change the type of a url (e.g. from default to custom). User can do this from the customization modal
-  app.route("patch", "/url/:id/type", middlewares.checkUrlOwnership, Url.changeUrlType);
+  app.route("patch", "/url/:id/type", middlewares.checkUrlOwnership, middlewares.rateLimitUrl, Url.changeUrlType);
 
   // Update the destination URL of an existing shortened link
   app.route("patch", "/url/:id/real-url", middlewares.checkUrlOwnership, middlewares.isValidURL, middlewares.checkUrlSafety, middlewares.rateLimitUrl, Url.updateRealUrl);

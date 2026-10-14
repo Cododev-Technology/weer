@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import axios from "axios";
-import lib from "./lib";
+import type { API } from "@weer/common";
 
 interface AuthContextValue {
   loading: boolean;
@@ -17,16 +17,23 @@ interface AuthContextValue {
   updateUsername: (newUsername: string) => Promise<void>;
   inactiveUsernames: InactiveUsername[];
   linkCredits: number;
+  sendCode: (name: string, email: string, password: string, username?: string) => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    code: string,
+    username?: string
+  ) => Promise<void>;
+  logIn: (email: string, password: string) => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  confirmPasswordReset: (userId: string, token: string, newPassword: string) => Promise<void>;
+  requestEmailChange: (newEmail: string) => Promise<void>;
+  confirmEmailChange: (newEmail: string, code: string) => Promise<void>;
+  changePassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-// What the API returns for each username
-interface UsernameEntry {
-  value: string;
-  active: boolean;
-  expires_at: string;
-}
 
 // for the inactiveUsernames state
 interface InactiveUsername {
@@ -48,27 +55,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const refreshAuth = useCallback(async () => {
     setLoading(true);
-    const { data } = await axios.get("/auth/status");
+    const { data } = await axios.get<API.Auth.StatusResponse>("/auth/status");
 
     setIsSignedIn(data.isSignedIn);
-    setEmail(data.email);
+    setEmail(data.email ?? "");
     setLinkCredits(data.linkCredits ?? 0);
 
     if (data.isSignedIn) {
+      const usernames = data.usernames ?? [];
+
       // Find the active username and set it
-      const activeUsernameObj = data.usernames.find(
-        (uname: UsernameEntry) => uname.active
-      );
+      const activeUsernameObj = usernames.find((uname) => uname.active);
 
       setUsername(activeUsernameObj ? activeUsernameObj.value : "");
 
       // Set inactive usernames
-      const inactiveUsernames = data.usernames.length
-        ? data.usernames
-            .filter((uname: UsernameEntry) => !uname.active)
-            .map((uname: UsernameEntry) => ({
+      const inactiveUsernames = usernames.length
+        ? usernames
+            .filter((uname) => !uname.active)
+            .map((uname) => ({
               username: uname.value,
-              expiresAt: new Date(uname.expires_at),
+              expiresAt: new Date(uname.expires_at!), // inactive usernames always have expires_at set
             }))
         : [];
       setInactiveUsernames(inactiveUsernames);
@@ -78,15 +85,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const updateUsername = async (newUsername: string) => {
-    try {
-      await axios.patch("/user/username", {
-        username: newUsername,
-      });
+    await axios.patch("/user/username", {
+      username: newUsername,
+    });
 
-      setUsername(newUsername);
-    } catch (error) {
-      lib.handleErr(error);
-    }
+    setUsername(newUsername);
+  };
+
+  const sendCode = async (name: string, email: string, password: string, username?: string) => {
+    await axios.post<any, any, API.Auth.SendCodeBody>("/auth/send-code", {
+      name,
+      email,
+      password,
+      username,
+    });
+  };
+
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    code: string,
+    username?: string
+  ) => {
+    await axios.post<any, any, API.Auth.RegisterBody>("/auth/register", {
+      name,
+      email,
+      password,
+      code,
+      username,
+    });
+  };
+
+  const logIn = async (email: string, password: string) => {
+    await axios.post<any, any, API.Auth.LoginBody>("/auth/login", { email, password });
+  };
+
+  const requestPasswordReset = async (email: string) => {
+    await axios.post<any, any, API.Auth.ForgotPasswordBody>("/auth/forgot-password", {
+      email,
+    });
+  };
+
+  const confirmPasswordReset = async (userId: string, token: string, newPassword: string) => {
+    await axios.patch<any, any, API.Auth.ResetPasswordBody>("/auth/reset-password", {
+      userId,
+      token,
+      newPassword,
+    });
+  };
+
+  const requestEmailChange = async (newEmail: string) => {
+    await axios.post<any, any, API.User.SendEmailChangeCodeBody>(
+      "/user/email/send-code",
+      { newEmail }
+    );
+  };
+
+  const confirmEmailChange = async (newEmail: string, code: string) => {
+    await axios.patch<any, any, API.User.ConfirmEmailChangeBody>(
+      "/user/email/confirm",
+      { newEmail, code }
+    );
+    await refreshAuth();
+  };
+
+  const changePassword = async (newPassword: string) => {
+    await axios.patch<any, any, API.User.ChangePasswordBody>("/user/password", {
+      newPassword,
+    });
   };
 
   useEffect(() => {
@@ -104,6 +171,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         updateUsername,
         inactiveUsernames,
         linkCredits,
+        sendCode,
+        register,
+        logIn,
+        requestPasswordReset,
+        confirmPasswordReset,
+        requestEmailChange,
+        confirmEmailChange,
+        changePassword,
       }}
     >
       {children}

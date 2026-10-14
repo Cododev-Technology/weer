@@ -3,8 +3,7 @@ import { redis } from "./redis.js";
 
 export interface IViewEvent {
   url_id: number;
-  // For now, due to legal reasons, we won't save the ip address until we have a proper privacy policy in place.
-  // ip_address?: string;
+  ip_address?: string;
   user_agent: string;
   referrer: string;
   link_type?: LinkType;
@@ -21,8 +20,8 @@ export function push(event: IViewEvent): void {
   const fields: (string | number)[] = [
     "url_id",
     event.url_id,
-    // ip_address,
-    // event.ip_address,
+    "ip_address",
+    event.ip_address ?? "",
     "user_agent",
     event.user_agent,
     "referrer",
@@ -37,7 +36,7 @@ export function push(event: IViewEvent): void {
 
   /**
    * Fire and forget — XADD is ~50µs and must not block the redirect response
-   * Example redis-cli command: XADD stream:views MAXLEN ~ 100000 * url_id "123" user_agent "Mozilla/5.0" referrer "google.com" via_qr "1" visitor_hash "abc-xyz" link_type "classic"
+   * Example redis-cli command: XADD stream:views MAXLEN ~ 100000 * url_id "123" ip_address "1.2.3.4" user_agent "Mozilla/5.0" referrer "google.com" via_qr "1" visitor_hash "abc-xyz" link_type "classic"
    *
    * This operation is Big O(1).
    * Trimming without the tilde (~) is O(n) and can cause latency spikes when the stream is long.

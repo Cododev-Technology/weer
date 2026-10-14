@@ -5,11 +5,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="Description"
-      content="The easiest way to create small shortened URLs for you long 
-    URLs and share them instantly. No sign up required and it's a 
-    one-click process."
+      content="Weer is a free, secure URL shortener. Shorten links and generate QR codes instantly, with no sign-up, no ads, and no tracking clutter."
     />
     <title>Weer | URL Shortener & QR Code Generator</title>
+
+    <link rel="canonical" href="https://weer.pro/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Weer" />
+    <meta property="og:url" content="https://weer.pro/" />
+    <meta
+      property="og:title"
+      content="Weer | URL Shortener & QR Code Generator"
+    />
+    <meta
+      property="og:description"
+      content="Weer is a free, secure URL shortener. Shorten links and generate QR codes instantly, with no sign-up, no ads, and no tracking clutter."
+    />
+    <meta
+      property="og:image"
+      content="https://weer.pro/favicons/web-app-manifest-512x512.png"
+    />
+
+    <meta name="twitter:card" content="summary" />
+    <meta
+      name="twitter:title"
+      content="Weer | URL Shortener & QR Code Generator"
+    />
+    <meta
+      name="twitter:description"
+      content="Weer is a free, secure URL shortener. Shorten links and generate QR codes instantly, with no sign-up, no ads, and no tracking clutter."
+    />
+    <meta
+      name="twitter:image"
+      content="https://weer.pro/favicons/web-app-manifest-512x512.png"
+    />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Weer",
+        "url": "https://weer.pro/",
+        "description": "Weer is a free, secure URL shortener. Shorten links and generate QR codes instantly, with no sign-up, no ads, and no tracking clutter.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (Web-based)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
 
     <link
       rel="icon"
@@ -30,10 +77,10 @@
 
     <link rel="stylesheet" href="/font-awesome/css/all.min.css" />
 
-    <link rel="stylesheet" href="/css/all.min.css" />
-
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css?family=Lato:100,300,300i,400,500,700"
+      href="https://fonts.googleapis.com/css?family=Lato:100,300,300i,400,500,700&display=swap"
       rel="stylesheet"
     />
 
@@ -44,7 +91,105 @@
     <div id="root"></div>
     <div id="modal-root"></div>
     <div id="snackbar"></div>
-    <br /><br /><br />
+
+    <section class="info-box" aria-labelledby="info-box-heading">
+      <button
+        type="button"
+        class="info-box__toggle"
+        id="info-box-toggle"
+        aria-expanded="false"
+        aria-controls="info-box-content"
+      >
+        <span class="info-box__toggle-text">
+          <i class="fa-solid fa-circle-info info-box__toggle-icon"></i>
+          <h2 id="info-box-heading">
+            Why Weer is the best personal URL shortener app available?
+          </h2>
+        </span>
+        <i class="fa-solid fa-chevron-down info-box__chevron"></i>
+      </button>
+
+      <div
+        class="info-box__content"
+        id="info-box-content"
+        role="region"
+        aria-labelledby="info-box-heading"
+      >
+        <div class="info-box__content-inner">
+          <p class="info-box__intro">
+            Weer gives you all the features you need for shortening and managing
+            links for free, and gives you the ability to share links with anyone
+            in the fastest possible way. Based on our measures, if you are
+            talking to someone and want to share a link with them, with Weer you
+            can do it in less than a few seconds,
+            <strong>much faster than any other URL shortener out there.</strong>
+          </p>
+
+          <div class="info-box__grid">
+            <div class="info-box__item">
+              <i class="fa-solid fa-bolt info-box__item-icon"></i>
+              <h3 class="info-box__item-heading">No sign-up required</h3>
+              <p class="info-box__item-text">
+                Paste a URL and get a short link instantly, no account, no
+                clutter, no popups, no extra junk. Want to keep things
+                organized? Create a free account anytime to manage your links
+                and claim a clean, custom username.
+              </p>
+            </div>
+
+            <div class="info-box__item">
+              <i class="fa-solid fa-shield-halved info-box__item-icon"></i>
+              <h3 class="info-box__item-heading">Secure by design</h3>
+              <p class="info-box__item-text">
+                Not only is every submitted URL checked by Google Web Risk for
+                safety, but if a link cannot be 100% trusted, we will also show
+                you exactly where you're headed before you're redirected instead
+                of an automatic redirect.
+              </p>
+            </div>
+
+            <div class="info-box__item">
+              <i class="fa-solid fa-circle-check info-box__item-icon"></i>
+              <h3 class="info-box__item-heading">Completely free</h3>
+              <p class="info-box__item-text">
+                All features of the app are free with no hidden fees or
+                subscriptions, and <strong>no ads</strong>. No premium features
+                locked away.
+              </p>
+            </div>
+
+            <div class="info-box__item">
+              <i class="fa-solid fa-qrcode info-box__item-icon"></i>
+              <h3 class="info-box__item-heading">Free QR codes</h3>
+              <p class="info-box__item-text">
+                Every shortened link comes with a free, permanent QR code that
+                you can download and keep.
+              </p>
+            </div>
+
+            <div class="info-box__item">
+              <i class="fa-solid fa-share-nodes info-box__item-icon"></i>
+              <h3 class="info-box__item-heading">Share a link in seconds</h3>
+              <p class="info-box__item-text">
+                Choose an Ultra or Digit code and share a link that's as easy to
+                say out loud as it is to type. Tell someone "go to weer.pro/198"
+                and they're there instantly.
+              </p>
+            </div>
+
+            <div class="info-box__item">
+              <i class="fa-solid fa-chart-simple info-box__item-icon"></i>
+              <h3 class="info-box__item-heading">Track visits</h3>
+              <p class="info-box__item-text">
+                See exactly how your links are performing. Total clicks and
+                unique visitors are tracked automatically for every link you
+                create.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <footer class="footer">
       <p class="footer__text">
@@ -135,6 +280,21 @@
           });
         }
       });
+
+      // "Why choose Weer?" info box toggle
+      (function () {
+        var toggle = document.getElementById("info-box-toggle");
+        var content = document.getElementById("info-box-content");
+
+        if (!toggle || !content) return;
+
+        toggle.addEventListener("click", function () {
+          var isOpen = toggle.getAttribute("aria-expanded") === "true";
+
+          toggle.setAttribute("aria-expanded", String(!isOpen));
+          content.classList.toggle("info-box__content--open", !isOpen);
+        });
+      })();
 
       // Buttons won't get focused on click
       document.addEventListener("click", function (e) {

@@ -93,6 +93,7 @@ const drainViewsOnce = async (): Promise<void> => {
       const entry = parseStreamFields(fields);
       values.push(
         Number(entry.url_id),
+        entry.ip_address || null,
         entry.user_agent ?? "",
         entry.referrer ?? "",
         entry.link_type || null,
@@ -105,6 +106,7 @@ const drainViewsOnce = async (): Promise<void> => {
 
     const COLUMNS = [
       "url_id",
+      "ip_address",
       "user_agent",
       "referrer",
       "link_type",

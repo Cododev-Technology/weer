@@ -1,13 +1,25 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Navigation from "./Navigation";
 import UrlShortener from "./UrlShortener";
 import Urls from "./Urls";
 
 import { AuthProvider } from "../AuthContext";
-import { ModalProvider } from "../ModalContext";
+import { ModalProvider, useModal } from "../ModalContext";
 import { UrlProvider } from "../UrlContext";
 
 const AppContent: React.FC = () => {
+  const { openModal } = useModal();
+
+  useEffect(() => {
+    if (window.location.pathname === "/reset-password") {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("t");
+      const userId = params.get("i");
+      if (token && userId) openModal("resetPassword", { token, userId });
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
+
   return (
     <>
       <Navigation />

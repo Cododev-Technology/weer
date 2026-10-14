@@ -1,6 +1,11 @@
 import React, { FC, useRef } from "react";
 import axios from "axios";
 
+import {
+  isValidUsername,
+  USERNAME_MIN_LENGTH,
+  USERNAME_MAX_LENGTH,
+} from "@weer/common";
 import { Modal, Input, Button } from "@weer/reusable";
 import { useAuth } from "../../AuthContext";
 import { useModal } from "../../ModalContext";
@@ -59,6 +64,16 @@ const Username: FC<UsernameProps> = (props) => {
     };
   }, []);
 
+  const validateUsername = (value: string): boolean => {
+    if (value && !isValidUsername(value)) {
+      setInputError(
+        `Username must be ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} characters and contain only letters, numbers, hyphens, and underscores.`
+      );
+      return false;
+    }
+    return true;
+  };
+
   // Sends a request to server to check if the username is available
   const checkUsernameAvailability = async (value: string) => {
     if (!value || value === username) {
@@ -77,10 +92,10 @@ const Username: FC<UsernameProps> = (props) => {
       if (data.available) {
         setInputSuccess(`${value} is available.`);
       } else {
-        setInputError(`${value} is already taken.`);
+        setInputError(`${value} is not available.`);
       }
     } catch (error) {
-      setInputError("Failed to check availability.");
+      setInputError(`Failed to check availability.`);
     } finally {
       setInputLoading(false);
     }
@@ -240,6 +255,10 @@ const Username: FC<UsernameProps> = (props) => {
                 error={inputError ?? undefined}
                 onChange={(value) => {
                   setUsernameInput(value);
+                  setInputSuccess(null);
+
+                  if (!validateUsername(value)) return;
+                  setInputError(null);
 
                   if (timer.current) clearTimeout(timer.current);
 
