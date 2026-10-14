@@ -212,6 +212,8 @@ const changeUrlType = async (req: Request, res: Response) => {
     return res.status(400).json({ message: "Missing parameters" });
   }
 
+  await enforceRateLimit(req);
+
   // ------- 1. Clean up the old code ------- //
 
   // First find the current url type and release the current code
@@ -349,8 +351,6 @@ const changeUrlType = async (req: Request, res: Response) => {
   }
 
   const typesWithExpiresAt = ["ultra", "digit"];
-
-  await enforceRateLimit(req);
 
   return res.json({
     newType,

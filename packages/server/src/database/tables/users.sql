@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   link_credits INTEGER NOT NULL DEFAULT 100, -- lifetime link creation/edit budget. Can be increased.
 
   token_code VARCHAR(200),
-  token_date TIMESTAMP,
+  token_date TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   UNIQUE (email)

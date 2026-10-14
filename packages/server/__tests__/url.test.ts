@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import request from "supertest";
 import { describe, it } from "mocha";
-import app from "../src/app.js";
+import app from "./helpers/target.js";
 
 describe("URL Endpoints", () => {
   it("should create a new classic shortened url", async () => {

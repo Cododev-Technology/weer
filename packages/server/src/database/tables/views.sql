@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS views (
   city VARCHAR(100),
   
   
-  created_at TIMESTAMP DEFAULT now(),
+  created_at TIMESTAMPTZ DEFAULT now(),
   CONSTRAINT fk_url FOREIGN KEY (url_id) REFERENCES urls(id) ON DELETE CASCADE,
 
   -- Ensure that if via_qr is true, link_type is NULL, and if via_qr is false, link_type is NOT NULL

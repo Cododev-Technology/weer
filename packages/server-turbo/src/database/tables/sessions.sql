@@ -1,0 +1,8 @@
+CREATE TABLE sessions (
+  id SERIAL PRIMARY KEY,
+  session_token CHAR(32) UNIQUE NOT NULL,
+  data JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_active TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '30 days')
+);

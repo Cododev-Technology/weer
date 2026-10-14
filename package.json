@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "cd packages/reusable && yarn run build && cd ../common && npm run build && cd ../web && yarn run build && cd ../styles && yarn run build && cd ../server && yarn run build",
+    "build": "cd packages/reusable && yarn run build && cd ../common && npm run build && cd ../web && yarn run build && cd ../styles && yarn run build && cd ../server && yarn run build && cd ../server-turbo && yarn run precompress",
     "seed": "cd packages/server && yarn seed",
     "dev": "cd packages/server && yarn run dev",
     "setup": "NODE_ENV=development yarn install && yarn build && cd packages/server && yarn seed",
