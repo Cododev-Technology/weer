@@ -50,7 +50,7 @@ resource "aws_instance" "db" {
   }
 
   root_block_device {
-    volume_size = 10 # GB
+    volume_size = 8 # GB
   }
 }
 
