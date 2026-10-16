@@ -27,7 +27,7 @@ The script will prompt you to seed the database (required on first run) and choo
 
 ## Natively — Production
 
-**Prerequisites:** Node.js, PostgreSQL, Redis, yarn, PM2
+**Prerequisites:** Node.js, Rust, PostgreSQL, Redis, yarn, PM2
 
 Set your environment variables either via AWS Parameter Store or by copying the example file:
 
@@ -44,11 +44,13 @@ yarn start
 
 `yarn setup` installs dependencies, builds all packages, and seeds the database. `yarn start` launches the server under PM2.
 
+`yarn start` runs `yarn start:node`, the Node.js server. `yarn start:rust` runs server-turbo, the Rust server, instead. To make it the default, change `start:node` to `start:rust` in the `start` script of the root `package.json`. With `REDIS=true`, server-turbo needs a Redis cluster: `cd packages/server-turbo && ./redis.sh -setup` starts a local one.
+
 ---
 
 ## Natively — Development
 
-**Prerequisites:** Node.js, PostgreSQL, Redis, yarn
+**Prerequisites:** Node.js, Rust, PostgreSQL, Redis, yarn
 
 1. Copy the example environment file and fill in your values:
    ```
@@ -61,6 +63,7 @@ yarn start
 3. Start the watchers in separate terminal tabs:
    ```
    cd packages/server && yarn dev   # server with auto-reload
+   # or, for the Rust server instead: cd packages/server-turbo && yarn dev
    cd packages/web && yarn dev      # webpack watcher
    cd packages/styles && yarn dev   # Sass watcher
    ```

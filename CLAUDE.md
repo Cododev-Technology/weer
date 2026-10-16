@@ -76,7 +76,7 @@ cd packages/web && yarn test
 ### Building (production)
 
 ```bash
-# Build everything in dependency order: reusable → common → web → styles → server → server-turbo's precompress (.br/.gz copies of server-shared/public/)
+# Build everything in dependency order: reusable → common → web → styles → server → server-turbo → server-turbo's precompress (.br/.gz copies of server-shared/public/)
 yarn build   # from root
 
 # Build individual packages
