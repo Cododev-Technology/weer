@@ -7,17 +7,17 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::net::IpAddr;
 use std::sync::LazyLock;
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
 use cpeak::CpeakError;
+use redis::cluster_async::ClusterConnection;
 use sqlx::AssertSqlSafe;
 
 use server_turbo::config::keys::KEYS;
 use server_turbo::database::index::POOL;
 use server_turbo::database::types::LinkType;
-use server_turbo::redis::redis::REDIS;
-use server_turbo::redis::views_stream::VIEWS_STREAM_KEY;
+use server_turbo::redis::redis::{check_connection, connect};
+use server_turbo::redis::views_stream::views_stream_key;
 
 // What Redis sends back for XREADGROUP: for every stream, its entries (an id, and the fields of the entry)
 type StreamEntries = Vec<(String, Vec<String>)>;
@@ -35,7 +35,7 @@ async fn janitor() {
     // In the Node.js version, the database and Redis connect as soon as their files are imported
     LazyLock::force(&POOL);
     if KEYS.redis_enabled {
-        LazyLock::force(&REDIS);
+        cpeak::spawn(check_connection());
     }
 
     cpeak::spawn(async {
@@ -58,7 +58,10 @@ async fn janitor() {
     });
 
     if KEYS.redis_enabled {
-        run_drain_loop().await;
+        // One drain loop for each of the streams the views are spread over
+        for shard in 0..KEYS.views_stream_shards {
+            cpeak::spawn(run_drain_loop(shard));
+        }
     }
 
     // Node.js keeps a program going for as long as it has a timer. Rust stops when main
@@ -87,7 +90,6 @@ async fn clean_up_expired_digit_code() {
 const GROUP_NAME: &str = "views_consumer";
 const CONSUMER_NAME: &str = "janitor";
 const BATCH_SIZE: u32 = 500;
-static CONSECUTIVE_ERRORS: AtomicU32 = AtomicU32::new(0);
 
 // Parse the flat field-value array from a Redis stream entry into an object
 fn parse_stream_fields(fields: &[String]) -> HashMap<&str, &str> {
@@ -102,14 +104,14 @@ fn parse_stream_fields(fields: &[String]) -> HashMap<&str, &str> {
 }
 
 // Create the consumer group once on startup. MKSTREAM creates the stream if it doesn't exist yet
-async fn create_views_group() {
+async fn create_views_group(redis: &mut ClusterConnection, key: &str) {
     let created = redis::cmd("XGROUP")
-        .arg(("CREATE", VIEWS_STREAM_KEY, GROUP_NAME, "0", "MKSTREAM"))
-        .query_async::<String>(&mut REDIS.clone())
+        .arg(("CREATE", key, GROUP_NAME, "0", "MKSTREAM"))
+        .query_async::<String>(redis)
         .await;
 
     match created {
-        Ok(_) => println!("[views-consumer] consumer group created"),
+        Ok(_) => println!("[views-consumer] consumer group created for {key}"),
         Err(err) => {
             // BUSYGROUP means the group already exists which is fine
             if !err.to_string().contains("BUSYGROUP") {
@@ -119,7 +121,7 @@ async fn create_views_group() {
     }
 }
 
-async fn drain_views_once() {
+async fn drain_views_once(redis: &mut ClusterConnection, key: &str, consecutive_errors: &mut u32) {
     let drained: Result<(), CpeakError> = async {
         let results: Streams = redis::cmd("XREADGROUP")
             .arg((
@@ -131,10 +133,10 @@ async fn drain_views_once() {
                 "BLOCK",
                 0,
                 "STREAMS",
-                VIEWS_STREAM_KEY,
+                key,
                 ">", // means give me the next messages that have never been delivered to any other consumer in this group
             ))
-            .query_async(&mut REDIS.clone())
+            .query_async(&mut *redis)
             .await?;
 
         let Some(results) = results.filter(|results| !results.is_empty()) else {
@@ -208,27 +210,27 @@ async fn drain_views_once() {
 
         // This tells Redis that the janitor has successfully processed the messages
         redis::cmd("XACK")
-            .arg((VIEWS_STREAM_KEY, GROUP_NAME, ids))
-            .query_async::<u64>(&mut REDIS.clone())
+            .arg((key, GROUP_NAME, ids))
+            .query_async::<u64>(&mut *redis)
             .await?;
 
-        CONSECUTIVE_ERRORS.store(0, Ordering::Relaxed);
+        *consecutive_errors = 0;
         // println!("[views-consumer] inserted {row_count} views");
         Ok(())
     }
     .await;
 
     if let Err(err) = drained {
-        let consecutive_errors = CONSECUTIVE_ERRORS.fetch_add(1, Ordering::Relaxed) + 1;
+        *consecutive_errors += 1;
         let delay = 1000_u64
-            .saturating_mul(2_u64.saturating_pow(consecutive_errors))
+            .saturating_mul(2_u64.saturating_pow(*consecutive_errors))
             .min(30_000);
-        eprintln!("[views-consumer] drain failed (retry in {delay}ms): {err}");
+        eprintln!("[views-consumer] drain of {key} failed (retry in {delay}ms): {err}");
         cpeak::sleep(Duration::from_millis(delay)).await;
     }
 }
 
-async fn clear_pending_on_startup() {
+async fn clear_pending_on_startup(redis: &mut ClusterConnection, key: &str) {
     let mut cleared = 0;
     loop {
         let results: Streams = redis::cmd("XREADGROUP")
@@ -239,10 +241,10 @@ async fn clear_pending_on_startup() {
                 "COUNT",
                 BATCH_SIZE,
                 "STREAMS",
-                VIEWS_STREAM_KEY,
+                key,
                 "0",
             ))
-            .query_async(&mut REDIS.clone())
+            .query_async(&mut *redis)
             .await
             .unwrap_or_else(|error| crash(&error));
 
@@ -256,34 +258,40 @@ async fn clear_pending_on_startup() {
 
         let ids: Vec<&str> = entries.iter().map(|(id, _)| id.as_str()).collect();
         redis::cmd("XACK")
-            .arg((VIEWS_STREAM_KEY, GROUP_NAME, &ids))
-            .query_async::<u64>(&mut REDIS.clone())
+            .arg((key, GROUP_NAME, &ids))
+            .query_async::<u64>(&mut *redis)
             .await
             .unwrap_or_else(|error| crash(&error));
         cleared += ids.len();
     }
 
     if cleared > 0 {
-        eprintln!("[janitor] Discarded {cleared} pending records from previous run.");
+        eprintln!("[janitor] Discarded {cleared} pending records of {key} from previous run.");
     }
 }
 
 // Drain continuously when there's data; sleep briefly when idle to avoid busy-waiting
-async fn run_drain_loop() {
+async fn run_drain_loop(shard: u32) {
+    let key = views_stream_key(shard);
+    // A connection of its own: XREADGROUP with BLOCK holds the connection until new views come
+    // in, so the loops of the other streams can't share it
+    let mut redis = connect();
+
     redis::cmd("CLIENT")
         .arg(("SETNAME", "janitor"))
-        .query_async::<String>(&mut REDIS.clone())
+        .query_async::<String>(&mut redis)
         .await
         .unwrap_or_else(|error| crash(&error));
-    create_views_group().await;
+    create_views_group(&mut redis, &key).await;
 
     // At this point we just get rid of the pending items. If we want 100% data integrity, we can implement a recovery mechanism that
     // fetches and processes the pending messages before starting the normal drain loop. In that case, we should handle the nil cases because of MAX_LEN.
     // We should also add a new column to the views table to store the Redis stream ID to avoid duplicates during recovery.
-    clear_pending_on_startup().await;
+    clear_pending_on_startup(&mut redis, &key).await;
 
+    let mut consecutive_errors = 0;
     loop {
-        drain_views_once().await;
+        drain_views_once(&mut redis, &key, &mut consecutive_errors).await;
 
         // We can sleep here to reduce the CPU load of this process when receiving lots of views.
         cpeak::sleep(Duration::from_millis(100)).await;
