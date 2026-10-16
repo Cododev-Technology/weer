@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import request from "supertest";
 import { describe, it } from "mocha";
-import app from "../src/app.js";
+import app from "./helpers/target.js";
 import { DB } from "../src/database/index.js";
 import type { IUrl } from "../src/database/types.js";
 import { signUpAndLogIn } from "./helpers/factories/auth.js";

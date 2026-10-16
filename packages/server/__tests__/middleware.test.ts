@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import request from "supertest";
 import { describe, it } from "mocha";
-import app from "../src/app.js";
+import app from "./helpers/target.js";
 import { createClassicLink } from "./helpers/factories/url.js";
 
 describe("middlewares.checkUrlOwnership", () => {

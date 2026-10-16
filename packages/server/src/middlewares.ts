@@ -33,8 +33,38 @@ function isValidURL(req: Request, res: Response, next: Next) {
 
   // Function to validate url
   const validURL = (str: string) => {
-    return /^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))(?::\d{2,5})?(?:[/?#]\S*)?$/i.test(
-      str
+    // No white space or control characters, and http://, https:// or ftp:// at the start
+    if (/[\s\p{Cc}]/u.test(str) || !/^(?:https?|ftp):\/\//i.test(str)) {
+      return false;
+    }
+
+    let hostname: string;
+    try {
+      hostname = new URL(str).hostname;
+    } catch {
+      return false;
+    }
+
+    // An IP address, but not one of a private network or of this machine
+    if (/^[\d.]+$/.test(hostname)) {
+      const [first, second, , last] = hostname.split(".").map(Number);
+      return (
+        first >= 1 &&
+        first <= 223 &&
+        last >= 1 &&
+        last <= 254 &&
+        first !== 10 &&
+        first !== 127 &&
+        !(first === 169 && second === 254) &&
+        !(first === 192 && second === 168) &&
+        !(first === 172 && second >= 16 && second <= 31)
+      );
+    }
+
+    // A domain: letters, digits and hyphens between its dots, and a TLD at the end
+    // (a TLD that is not in English is written as xn--..., like xn--p1ai for рф)
+    return /^(?:[a-z0-9]+(?:-+[a-z0-9]+)*\.)+(?:xn--[a-z0-9-]*[a-z0-9]|[a-z]{2,})$/.test(
+      hostname
     );
   };
 
@@ -48,7 +78,8 @@ function isValidURL(req: Request, res: Response, next: Next) {
 async function checkUrlOwnership(req: Request, res: Response, next: Next) {
   const urlId = Number(req.params?.id);
 
-  if (!urlId) {
+  // Only digits, and not more than a PostgreSQL integer can hold
+  if (!urlId || !/^\d+$/.test(req.params?.id) || urlId > 2147483647) {
     throw { status: 400, message: "Invalid URL ID." };
   }
 

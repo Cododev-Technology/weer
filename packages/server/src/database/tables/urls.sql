@@ -31,8 +31,8 @@ CREATE TABLE IF NOT EXISTS urls (
   -- Esp. needed for non-logged in users to prevent spamming and impose rate limits
   ip_address INET,
 
-  updated_at TIMESTAMP DEFAULT now(),
-  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  created_at TIMESTAMPTZ DEFAULT now(),
   CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id),
   CONSTRAINT fk_session FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE SET NULL,
   CONSTRAINT chk_owner CHECK (

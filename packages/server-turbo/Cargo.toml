@@ -1,0 +1,65 @@
+[package]
+name = "server-turbo"
+version = "1.0.0"
+edition = "2024"
+description = "URL Shortner Application"
+license = "ISC"
+publish = false
+default-run = "index"
+
+# Node.js finds the files of a project through their imports. Rust needs them listed, and
+# for this app that is done in one place: src/mod.rs
+[lib]
+path = "src/mod.rs"
+# All the tests are in __tests__
+test = false
+doctest = false
+
+# The programs you can run (see the scripts in package.json)
+[[bin]]
+name = "index"
+path = "src/index.rs"
+test = false
+
+[[bin]]
+name = "janitor"
+path = "src/janitor.rs"
+test = false
+
+[[bin]]
+name = "seed"
+path = "src/database/seed.rs"
+test = false
+
+[[bin]]
+name = "precompress"
+path = "src/precompress.rs"
+test = false
+
+# All the test files are listed in __tests__/mod.rs (what .mocharc.cjs is in the Node.js version)
+[[test]]
+name = "tests"
+path = "__tests__/mod.rs"
+
+[dependencies]
+cpeak = { path = "../../../cpeak/rust" }
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "derive", "tls-rustls-ring", "chrono", "json", "ipnet"] }
+redis = { version = "1", default-features = false, features = ["tokio-comp", "tokio-rustls-comp", "streams", "cluster-async"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "json", "gzip"] }
+qrcode = { version = "0.14", default-features = false, features = ["image", "svg"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+url = "2"
+rand = "0.10"
+regex = "1"
+subtle = "2"
+# Amazon SES, what @aws-sdk/client-ses is in the Node.js version. Its HTTPS client uses ring,
+# like everything else here (the default one would bring in a second TLS crypto library).
+aws-config = { version = "1", default-features = false, features = ["rt-tokio"] }
+aws-sdk-ses = { version = "1", default-features = false, features = ["rt-tokio"] }
+aws-smithy-http-client = { version = "1", default-features = false, features = ["rustls-ring"] }
+
+# The crates we depend on (Cpeak, the PostgreSQL client, ...) are optimized even in debug
+# builds, so `yarn dev` and the tests stay fast while our own code still compiles quickly.
+[profile.dev.package."*"]
+opt-level = 3

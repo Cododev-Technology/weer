@@ -1,0 +1,17 @@
+{
+  "name": "@weer/server-turbo",
+  "version": "1.0.0",
+  "description": "URL Shortner Application",
+  "scripts": {
+    "seed": "./env.sh cargo run --bin seed",
+    "test": "./env.sh DB_DATABASE=weer_test NODE_ENV=test SKIP_EMAIL=true cargo test",
+    "dev": "./env.sh cargo watch -x 'run --bin index'",
+    "janitor": "./env.sh cargo run --bin janitor",
+    "build": "cargo build --release",
+    "precompress": "cargo run --release --bin precompress",
+    "start": "./env.sh ./target/release/index",
+    "prod": "./env.sh pm2 start ecosystem.config.cjs"
+  },
+  "author": "",
+  "license": "ISC"
+}

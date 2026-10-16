@@ -14,11 +14,11 @@ process.title = "node-janitor";
 // ─── Expired digit codes clean up ─────────────────────────────────────────────
 
 const cleanUpExpiredDigitCode = async () => {
-  const result = await DB.query(
+  const result = await pool.query(
     `DELETE FROM digit_codes WHERE expires_at < NOW();`
   );
 
-  if (result.rowCount > 0)
+  if (result.rowCount)
     console.log(`[janitor] cleaned up ${result.rowCount} expired digit codes.`);
 };
 

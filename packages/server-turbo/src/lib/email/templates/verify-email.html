@@ -1,0 +1,70 @@
+<!-- Header -->
+<cpeak include="partials/_header.html" />
+
+<!-- Title -->
+<h1
+  style="
+    margin: 0 0 16px;
+    font-size: 22px;
+    font-weight: 600;
+    color: #333;
+    font-family: Arial, Helvetica, sans-serif;
+  "
+>
+  {{ title }}
+</h1>
+
+<!-- Intro -->
+<p
+  style="
+    margin: 0 0 28px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #666;
+    font-family: Arial, Helvetica, sans-serif;
+  "
+>
+  Enter the code below to verify your email address and complete your Weer
+  account setup.
+</p>
+
+<!-- Code box -->
+<div style="text-align: center; margin-bottom: 28px">
+  <div
+    style="
+      display: inline-block;
+      background: #f7f8f9;
+      border: 1px solid #dde1e5;
+      border-radius: 8px;
+      padding: 20px 40px;
+    "
+  >
+    <span
+      style="
+        font-size: 36px;
+        font-weight: 700;
+        color: #333;
+        letter-spacing: 20px;
+        font-family: Arial, Helvetica, sans-serif;
+      "
+      >{{ code }}</span
+    >
+  </div>
+</div>
+
+<!-- Disclaimer -->
+<p
+  style="
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #aaa;
+    font-family: Arial, Helvetica, sans-serif;
+  "
+>
+  This code expires in {{ expiresIn }}. If you didn't request to create a Weer
+  account, you can safely ignore this email.
+</p>
+
+<!-- Footer -->
+<cpeak include="partials/_footer.html" />

@@ -1,6 +1,9 @@
 import type { CpeakRequest as Request } from "cpeak";
 import { DB } from "../database/index.js";
+import keys from "../config/keys.js";
 import util from "./util.js";
+
+// RATE_LIMIT=false turns all of them off (for the load tests)
 
 const USER_LIFETIME_LIMIT = 100;
 const IP_BURST_LIMIT = 10; // per 10 minutes
@@ -24,12 +27,16 @@ async function enforceUserLimit(userId: number): Promise<void> {
 
 // Refunds a credit spent by enforceUserLimit when the operation it was gating ultimately failed.
 export async function refundUserCredit(userId: number): Promise<void> {
+  if (!keys.rateLimit) return;
+
   await DB.query(`UPDATE users SET link_credits = link_credits + 1 WHERE id = $1`, [
     userId,
   ]);
 }
 
 export async function enforceIpLimit(ip: string): Promise<void> {
+  if (!keys.rateLimit) return;
+
   const row = await DB.find<{ burst_count: number }>(
     `
     INSERT INTO rate_limits (ip_address, burst_count, burst_reset_at)
@@ -51,6 +58,8 @@ export async function enforceIpLimit(ip: string): Promise<void> {
 }
 
 export async function enforceEmailCooldown(email: string): Promise<void> {
+  if (!keys.rateLimit) return;
+
   const row = await DB.find<{ burst_count: number }>(
     `
     INSERT INTO email_rate_limits (email, burst_count, burst_reset_at)
@@ -72,6 +81,8 @@ export async function enforceEmailCooldown(email: string): Promise<void> {
 }
 
 export async function enforceLoginRateLimit(email: string): Promise<void> {
+  if (!keys.rateLimit) return;
+
   const row = await DB.find<{ burst_count: number }>(
     `
     INSERT INTO login_rate_limits (email, burst_count, burst_reset_at)
@@ -93,6 +104,8 @@ export async function enforceLoginRateLimit(email: string): Promise<void> {
 }
 
 export async function enforceRateLimit(req: Request): Promise<void> {
+  if (!keys.rateLimit) return;
+
   if (req.user) return enforceUserLimit(req.user.id);
 
   const ip = util.getClientIp(req);

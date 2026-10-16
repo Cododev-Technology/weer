@@ -24,7 +24,7 @@ export const pool = new pkg.Pool({
           rejectUnauthorized: false,
         }
       : false,
-  max: 10, // this means how many concurrent connections to the database this node process can have
+  max: keys.dbPoolSize, // this means how many concurrent connections to the database this node process can have (DB_POOL_SIZE, 10 by default)
   idleTimeoutMillis: 10000, // close idle clients after 10 seconds
 });
 

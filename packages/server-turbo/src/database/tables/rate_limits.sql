@@ -1,0 +1,6 @@
+-- CREATE RATE LIMITS TABLE
+CREATE TABLE IF NOT EXISTS rate_limits (
+  ip_address INET PRIMARY KEY,
+  burst_count INT NOT NULL DEFAULT 0,
+  burst_reset_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

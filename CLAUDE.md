@@ -14,12 +14,20 @@ This is a yarn project and all project commands should be run with `yarn`.
 
 ```
 packages/
-  server/    # Cpeak/Node.js backend API
-  web/       # React frontend (compiled to server/public/scripts/)
-  styles/    # SASS → CSS pipeline (compiled to server/public/styles.css)
-  common/    # Shared TypeScript types (LinkType enum, etc.)
-  reusable/  # Shared React component library
+  server/        # Cpeak/Node.js backend API
+  server-turbo/  # Cpeak/Rust port of server/ (serves the same server/public/)
+  web/           # React frontend (compiled to server/public/scripts/)
+  styles/        # SASS → CSS pipeline (compiled to server/public/styles.css)
+  common/        # Shared TypeScript types (LinkType enum, etc.)
+  reusable/      # Shared React component library
 ```
+
+## server-turbo
+
+`packages/server-turbo/` is a Rust port of `packages/server/`, built on Cpeak for Rust. It should mirror the Node.js server and act the same way, except for:
+
+- **Redis mode**: the Node.js server runs Redis in single mode (`REDIS_URL`), while server-turbo runs it in cluster mode (`REDIS_CLUSTER_NODES`). This means the janitor is different too: in a cluster a key lives on one node, so server-turbo spreads the views over `VIEWS_STREAM_SHARDS` streams (`weer:stream:views:0`, `weer:stream:views:1`, ...) instead of the Node.js server's single `weer:stream:views`, and its janitor drains each of them in a loop of its own. When the Node.js server's views stream or janitor changes, make the same change in server-turbo, adapted to the shards.
+- **Link caching**: server-turbo caches links in the Redis cluster (`src/redis/links-cache.rs`). The Node.js server has no link caching and doesn't need it.
 
 ## Commands
 
@@ -28,6 +36,12 @@ packages/
 ```bash
 # Start server with auto-reload
 cd packages/server && yarn dev
+
+# Or start server-turbo with auto-reload instead (same .env and port as the Node.js server)
+cd packages/server-turbo && yarn dev
+
+# Set up, stop or resume the local Redis cluster that server-turbo uses when REDIS=true
+cd packages/server-turbo && ./redis.sh -setup   # or -stop, -resume
 
 # Build and watch frontend (run in separate terminal)
 cd packages/web && yarn dev
@@ -48,6 +62,12 @@ cd packages/server && yarn test
 # Run a single test file
 cd packages/server && yarn mocha --extension ts __tests__/routes.test.ts --timeout 10000
 
+# Run all server-turbo tests (same weer_test database as the Node.js tests, so never run both at once)
+cd packages/server-turbo && yarn test
+
+# Run a single server-turbo test file (its module name in __tests__/mod.rs)
+cd packages/server-turbo && yarn test url_test
+
 # Run frontend tests
 cd packages/web && yarn test
 ```
@@ -55,11 +75,12 @@ cd packages/web && yarn test
 ### Building (production)
 
 ```bash
-# Build everything in dependency order: reusable → common → web → styles → server
+# Build everything in dependency order: reusable → common → web → styles → server → server-turbo's precompress (.br/.gz copies of server/public/)
 yarn build   # from root
 
 # Build individual packages
 cd packages/server && yarn build   # tsc -p .
+cd packages/server-turbo && yarn build   # cargo build --release
 cd packages/web && yarn build   # webpack --mode production
 cd packages/styles && yarn build
 ```
@@ -69,6 +90,8 @@ cd packages/styles && yarn build
 ```bash
 # Initialize/seed the database
 cd packages/server && yarn seed
+# or the same with server-turbo
+cd packages/server-turbo && yarn seed
 ```
 
 ## Architecture
