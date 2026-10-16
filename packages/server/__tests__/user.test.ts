@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import request from "supertest";
 import { describe, it } from "mocha";
-import app from "./helpers/target.js";
+import app, { itInProcess } from "./helpers/target.js";
 import { DB } from "../src/database/index.js";
 import type { IUsername } from "../src/database/types.js";
 import { createUser } from "./helpers/factories/user.js";
@@ -259,7 +259,7 @@ describe("User Endpoints", () => {
     assert.strictEqual(loginRes.statusCode, 200);
   });
 
-  it("allows setting a first password on a Google-only account", async () => {
+  itInProcess("allows setting a first password on a Google-only account", async () => {
     const email = "google-only@example.com";
     await DB.insert("users", { email, name: "Google Only", google_id: "fake-sub-9" });
 

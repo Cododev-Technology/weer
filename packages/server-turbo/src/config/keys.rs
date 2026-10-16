@@ -8,6 +8,11 @@ fn get_env(key: &str) -> String {
     value.unwrap_or_default()
 }
 
+// For the settings that have a default, so leaving them out is fine
+fn get_optional_env(key: &str) -> Option<String> {
+    std::env::var(key).ok().filter(|value| !value.is_empty())
+}
+
 pub struct Keys {
     pub domain: String,
     pub google_client_id: String,
@@ -23,9 +28,14 @@ pub struct Keys {
     pub db_database: String,
     pub db_password: String,
     pub db_port: u16,
+    pub db_pool_size: u32,
     // Redis
     pub redis_url: String,
     pub redis_enabled: bool,
+    // Show the warning page before redirecting to a domain that isn't on the allowlist
+    pub redirect_warning: bool,
+    // Limit how many links, emails and logins a visitor or a user can make (see lib/rate-limit.rs)
+    pub rate_limit: bool,
 }
 
 pub static KEYS: LazyLock<Keys> = LazyLock::new(|| Keys {
@@ -43,7 +53,12 @@ pub static KEYS: LazyLock<Keys> = LazyLock::new(|| Keys {
     db_database: get_env("DB_DATABASE"),
     db_password: get_env("DB_PASSWORD"),
     db_port: get_env("DB_PORT").parse().unwrap_or_default(),
+    db_pool_size: get_optional_env("DB_POOL_SIZE")
+        .and_then(|size| size.parse().ok())
+        .unwrap_or(10),
     // Redis
     redis_url: get_env("REDIS_URL"),
     redis_enabled: get_env("REDIS") == "true",
+    redirect_warning: get_optional_env("REDIRECT_WARNING").as_deref() != Some("false"),
+    rate_limit: get_optional_env("RATE_LIMIT").as_deref() != Some("false"),
 });

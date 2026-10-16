@@ -67,7 +67,7 @@ pub fn new_pool(database: &str, ssl: bool) -> PgPool {
         });
 
     PgPoolOptions::new()
-        .max_connections(10) // this means how many concurrent connections to the database this process can have
+        .max_connections(KEYS.db_pool_size) // this means how many concurrent connections to the database this process can have (DB_POOL_SIZE, 10 by default)
         .idle_timeout(Duration::from_millis(10000)) // close idle clients after 10 seconds
         // Without this, sqlx asks PostgreSQL if a connection still works every time before using it
         .test_before_acquire(false)

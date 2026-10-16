@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import request from "supertest";
 import { describe, it } from "mocha";
-import app from "./helpers/target.js";
+import app, { itInProcess } from "./helpers/target.js";
 import { DB } from "../src/database/index.js";
 import type { ISession, IUser } from "../src/database/types.js";
 import keys from "../src/config/keys.js";
@@ -381,7 +381,7 @@ describe("Auth Endpoints", () => {
     assert.strictEqual(oldLoginRes.statusCode, 401);
   });
 
-  it("lets a Google-only account set a password via forgot-password, without breaking Google login", async () => {
+  itInProcess("lets a Google-only account set a password via forgot-password, without breaking Google login", async () => {
     const email = "google-forgot-password-test@example.com";
 
     const originalFetch = global.fetch;
@@ -433,7 +433,7 @@ describe("Auth Endpoints", () => {
     assert.strictEqual(lastRes!.statusCode, 429);
   });
 
-  it("links a Google login to an existing password account with the same email", async () => {
+  itInProcess("links a Google login to an existing password account with the same email", async () => {
     const email = "link-test@example.com";
     const userId = await signUpAndLogIn(request.agent(app), email);
 

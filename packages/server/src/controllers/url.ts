@@ -512,7 +512,8 @@ const redirect = async (req: Request, res: Response) => {
     await DB.insert<IView>("views", viewData);
   }
 
-  if (isAllowlistedDomain(url.real_url)) {
+  // REDIRECT_WARNING=false skips the warning page for every link (for the load tests)
+  if (!keys.redirectWarning || isAllowlistedDomain(url.real_url)) {
     res.redirect(url.real_url);
   } else {
     const queryString = new URLSearchParams({

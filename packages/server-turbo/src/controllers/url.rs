@@ -635,7 +635,8 @@ pub async fn redirect(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result
         .await?;
     }
 
-    if is_allowlisted_domain(&url.real_url) {
+    // REDIRECT_WARNING=false skips the warning page for every link (for the load tests)
+    if !KEYS.redirect_warning || is_allowlisted_domain(&url.real_url) {
         res.redirect(&url.real_url)
     } else {
         let mut query_string = form_urlencoded::Serializer::new(String::new());
