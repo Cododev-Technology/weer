@@ -26,7 +26,10 @@ import {
   validateAffixCode,
 } from "../lib/links.js";
 
-const publicPath = new URL("../../public", import.meta.url).pathname;
+const publicPath = new URL(
+  "../../../server-shared/public",
+  import.meta.url
+).pathname;
 
 // Helper functions to check affix code availability
 const isAffixAvailable = async (code: string, userId: string) => {

@@ -1,18 +1,9 @@
+import DOMAIN_ALLOWLIST from "@weer/common/dist/config/domain-allowlist.json" with { type: "json" };
+
 // List of domains that we 100% trust. Links pointing to these will not be checked by our API safe link checker.
 // Also, we will not show a secondary page to users upon redirects (The one that says "are you sure that you want to be redirected to this link?")
 // We use a Set for O(1) lookups.
-const ALLOWLISTED_DOMAINS = new Set([
-  "instagram.com",
-  "youtube.com",
-  "youtu.be",
-  "twitter.com",
-  "x.com",
-  "linkedin.com",
-  "facebook.com",
-  "amazon.com",
-  "google.com",
-  "github.com",
-]);
+const ALLOWLISTED_DOMAINS = new Set(DOMAIN_ALLOWLIST);
 
 export function isAllowlistedDomain(url: string): boolean {
   let hostname: string;

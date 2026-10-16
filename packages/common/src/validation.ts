@@ -1,3 +1,6 @@
+import links from "./config/links.json";
+import username from "./config/username.json";
+
 export function isValidName(name: string): boolean {
   return typeof name === "string" && /^[A-Za-z ]{3,30}$/.test(name);
 }
@@ -25,9 +28,9 @@ export function isValidPassword(password: string): boolean {
 export const CODE_CHARSET_REGEX = /^[a-zA-Z0-9_-]+$/;
 export const INVALID_CODE_CHARS_REGEX = /[^a-zA-Z0-9_-]/g;
 
-export const CUSTOM_CODE_MIN_LENGTH = 7;
-export const AFFIX_CODE_MIN_LENGTH = 1;
-export const CODE_MAX_LENGTH = 80;
+export const CUSTOM_CODE_MIN_LENGTH = links.custom.minLength;
+export const AFFIX_CODE_MIN_LENGTH = links.affix.minLength;
+export const CODE_MAX_LENGTH = links.custom.maxLength;
 
 export function stripInvalidCodeChars(value: string): string {
   return value.replace(INVALID_CODE_CHARS_REGEX, "");
@@ -51,8 +54,8 @@ export function isValidAffixCode(code: string): boolean {
   );
 }
 
-export const USERNAME_MIN_LENGTH = 1;
-export const USERNAME_MAX_LENGTH = 30;
+export const USERNAME_MIN_LENGTH = username.minLength;
+export const USERNAME_MAX_LENGTH = username.maxLength;
 
 export function isValidUsername(username: string): boolean {
   return (

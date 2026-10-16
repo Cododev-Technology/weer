@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import fs from "fs";
+import { Cluster } from "ioredis";
 import path from "path";
 import keys from "../config/keys.js";
 import { redis } from "../redis/redis.js";
@@ -58,6 +59,36 @@ if (keys.redisEnabled) {
     })
     .catch((err: Error) => {
       console.error("[redis] failed to flush the database:", err.message);
+    });
+}
+
+// server-turbo runs Redis in cluster mode, so flush every master of that one too
+if (keys.redisEnabled && keys.redisClusterNodes) {
+  const cluster = new Cluster(
+    keys.redisClusterNodes.split(",").map((node) => node.trim()),
+    { lazyConnect: true, clusterRetryStrategy: () => null }
+  );
+  cluster.on("error", () => {});
+
+  const ready = new Promise<void>((resolve, reject) => {
+    cluster.once("ready", resolve);
+    // ioredis ends a cluster that has no slots instead of rejecting connect()
+    cluster.once("end", () => reject(new Error("the cluster is not ready")));
+    cluster.connect().catch(reject);
+  });
+
+  ready
+    .then(() =>
+      Promise.all(cluster.nodes("master").map((node) => node.flushdb()))
+    )
+    .then(() => {
+      console.log("\n[redis] flushed the cluster.");
+    })
+    .catch((err: Error) => {
+      console.error("[redis] failed to flush the cluster:", err.message);
+    })
+    .finally(() => {
+      cluster.disconnect();
     });
 }
 

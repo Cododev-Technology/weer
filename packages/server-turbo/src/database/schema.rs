@@ -8,7 +8,7 @@ use super::index::new_pool;
 use crate::config::keys::KEYS;
 use crate::lib::link_definitions::LINKS;
 
-const DATABASE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/database");
+const DATABASE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../server-shared/database");
 
 fn read(relative: &str) -> Result<String, CpeakError> {
     fs::read_to_string(Path::new(DATABASE_PATH).join(relative))
@@ -16,37 +16,10 @@ fn read(relative: &str) -> Result<String, CpeakError> {
 }
 
 // Drop order matters: child tables (with FKs) must be dropped before parents
-const DROP_ORDER: [&str; 13] = [
-    "views",
-    "digit_codes",
-    "ultra_codes",
-    "urls",
-    "link_type_enum", // this is a TYPE, not a table
-    "usernames",
-    "sessions",
-    "rate_limits",
-    "email_rate_limits",
-    "login_rate_limits",
-    "email_codes",
-    "tokens",
-    "users",
-];
-
 // Create order matters: parent tables must exist before children reference them
-const CREATE_ORDER: [(&str, &str); 12] = [
-    ("users", "tables/users.sql"),
-    ("tokens", "tables/tokens.sql"),
-    ("email_codes", "tables/email_codes.sql"),
-    ("email_rate_limits", "tables/email_rate_limits.sql"),
-    ("login_rate_limits", "tables/login_rate_limits.sql"),
-    ("sessions", "tables/sessions.sql"),
-    ("urls", "tables/urls.sql"),
-    ("ultra_codes", "tables/ultra_codes.sql"),
-    ("digit_codes", "tables/digit_codes.sql"),
-    ("views", "tables/views.sql"),
-    ("usernames", "tables/usernames.sql"),
-    ("rate_limits", "tables/rate_limits.sql"),
-];
+// (DROP_ORDER and CREATE_ORDER, from packages/server-shared/database/tables.json, written by
+// build.rs)
+include!(concat!(env!("OUT_DIR"), "/tables.rs"));
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Opts {
@@ -96,6 +69,7 @@ pub async fn apply_schema(pool: &PgPool, opts: impl Into<Option<Opts>>) -> Resul
     log("\nDropping the tables...");
     for name in DROP_ORDER {
         if name == "link_type_enum" {
+            // this is a TYPE, not a table
             sqlx::query("DROP TYPE IF EXISTS link_type_enum")
                 .execute(pool)
                 .await?;
@@ -110,9 +84,9 @@ pub async fn apply_schema(pool: &PgPool, opts: impl Into<Option<Opts>>) -> Resul
     }
 
     log("\nCreating the tables...");
-    for (name, file) in CREATE_ORDER {
+    for name in CREATE_ORDER {
         // A file is more than one statement, and those go through raw_sql()
-        sqlx::raw_sql(AssertSqlSafe(read(file)?))
+        sqlx::raw_sql(AssertSqlSafe(read(&format!("tables/{name}.sql"))?))
             .execute(pool)
             .await?;
         log(&format!(

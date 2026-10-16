@@ -14,8 +14,8 @@ use crate::database::types::{IToken, IUser};
 use crate::redis::redis::check_connection;
 use crate::router::api_router;
 
-// The web and styles packages build into the public folder of the Node.js server, so both servers serve that one
-const PUBLIC_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../server/public");
+// The web and styles packages build into the public folder of server-shared, so both servers serve that one
+const PUBLIC_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../server-shared/public");
 
 pub fn app() -> Cpeak {
     // In the Node.js version, the database and Redis connect as soon as their files are

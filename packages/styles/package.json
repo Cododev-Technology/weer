@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "dev": "sass src/main.scss ../server/public/styles.css --watch",
-    "compile:sass": "sass src/main.scss ../server/public/style.comp.css",
-    "concat:css": "concat -o ../server/public/style.concat.css ../server/public/style.comp.css",
-    "prefix:css": "postcss --use autoprefixer -b \"last 10 versions\" ../server/public/style.concat.css -o ../server/public/style.prefix.css",
-    "compress:css": "sass ../server/public/style.prefix.css ../server/public/styles.css --style=compressed --no-source-map",
-    "cleanup": "rm ../server/public/style.prefix.css ../server/public/style.concat.css ../server/public/style.comp.css",
+    "dev": "sass src/main.scss ../server-shared/public/styles.css --watch",
+    "compile:sass": "sass src/main.scss ../server-shared/public/style.comp.css",
+    "concat:css": "concat -o ../server-shared/public/style.concat.css ../server-shared/public/style.comp.css",
+    "prefix:css": "postcss --use autoprefixer -b \"last 10 versions\" ../server-shared/public/style.concat.css -o ../server-shared/public/style.prefix.css",
+    "compress:css": "sass ../server-shared/public/style.prefix.css ../server-shared/public/styles.css --style=compressed --no-source-map",
+    "cleanup": "rm ../server-shared/public/style.prefix.css ../server-shared/public/style.concat.css ../server-shared/public/style.comp.css",
     "build": "npm-run-all compile:sass concat:css prefix:css compress:css cleanup"
   },
   "author": "",

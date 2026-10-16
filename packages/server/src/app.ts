@@ -25,7 +25,8 @@ app.beforeEach(parseJSON());
 // app.beforeEach(helmet());
 app.beforeEach(compression() as any);
 
-const publicPath = new URL("../public", import.meta.url).pathname;
+const publicPath = new URL("../../server-shared/public", import.meta.url)
+  .pathname;
 app.beforeEach(serveStatic(publicPath));
 
 // For sever side rendering

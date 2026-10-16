@@ -2,15 +2,15 @@
 
 is_yes() { case "$1" in y|Y|yes|Yes|YES) return 0 ;; *) return 1 ;; esac }
 
-ENV_FILE="packages/server/.env"
+ENV_FILE="packages/server-shared/.env"
 
 # ─── .env check ───────────────────────────────────────────────────────────────
 if [ ! -f "$ENV_FILE" ]; then
   echo ""
-  echo "  packages/server/.env not found."
+  echo "  packages/server-shared/.env not found."
   echo "  Copy the example and fill in your values:"
   echo ""
-  echo "    cp packages/server/.env.example packages/server/.env"
+  echo "    cp packages/server-shared/.env.example packages/server-shared/.env"
   echo ""
   exit 1
 fi

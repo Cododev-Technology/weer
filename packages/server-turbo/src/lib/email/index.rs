@@ -6,7 +6,10 @@ use cpeak::{CpeakError, Value};
 
 use crate::config::keys::KEYS;
 
-const TEMPLATES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/lib/email/templates");
+const TEMPLATES_DIR: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../server-shared/email-templates"
+);
 
 pub enum Html<'a> {
     Raw(String),
@@ -16,7 +19,7 @@ pub enum Html<'a> {
     },
 }
 
-// Sends an HTML email via SES. Pass a raw HTML string or a template from './templates', which
+// Sends an HTML email via SES. Pass a raw HTML string or a template from '../server-shared/email-templates', which
 // is rendered with cpeak's render::string.
 pub async fn send_email(to: &str, subject: &str, html: Html<'_>) -> Result<(), CpeakError> {
     if std::env::var("SKIP_EMAIL").as_deref() == Ok("true") {

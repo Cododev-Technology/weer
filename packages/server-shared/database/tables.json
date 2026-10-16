@@ -1,0 +1,31 @@
+{
+  "drop": [
+    "views",
+    "digit_codes",
+    "ultra_codes",
+    "urls",
+    "link_type_enum",
+    "usernames",
+    "sessions",
+    "rate_limits",
+    "email_rate_limits",
+    "login_rate_limits",
+    "email_codes",
+    "tokens",
+    "users"
+  ],
+  "create": [
+    "users",
+    "tokens",
+    "email_codes",
+    "email_rate_limits",
+    "login_rate_limits",
+    "sessions",
+    "urls",
+    "ultra_codes",
+    "digit_codes",
+    "views",
+    "usernames",
+    "rate_limits"
+  ]
+}

@@ -5,10 +5,12 @@
   "typings": "dist/index.d.ts",
   "private": true,
   "devDependencies": {
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "json5": "^2.2.3"
   },
   "scripts": {
-    "dev": "tsc --watch",
-    "build": "tsc"
+    "build:config": "mkdir -p src/config && for f in config/*.json5; do json5 -s 2 -o src/${f%5} $f; done",
+    "dev": "yarn build:config && tsc --watch",
+    "build": "yarn build:config && tsc"
   }
 }

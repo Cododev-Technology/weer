@@ -3,45 +3,25 @@ import path from "path";
 import pkg from "pg";
 import type { Pool } from "pg";
 import keys from "../config/keys.js";
-import { LINKS } from "../lib/link-definitions.js";
+import { LINKS } from "@weer/common";
 
-const databasePath = new URL("./", import.meta.url).pathname;
+const databasePath = new URL(
+  "../../../server-shared/database/",
+  import.meta.url
+).pathname;
 
 const read = (relative: string) =>
   fs.readFileSync(path.join(databasePath, relative)).toString();
 
+const TABLES: { drop: string[]; create: string[] } = JSON.parse(
+  read("tables.json")
+);
+
 // Drop order matters: child tables (with FKs) must be dropped before parents
-const DROP_ORDER = [
-  "views",
-  "digit_codes",
-  "ultra_codes",
-  "urls",
-  "link_type_enum", // this is a TYPE, not a table
-  "usernames",
-  "sessions",
-  "rate_limits",
-  "email_rate_limits",
-  "login_rate_limits",
-  "email_codes",
-  "tokens",
-  "users",
-];
+const DROP_ORDER = TABLES.drop;
 
 // Create order matters: parent tables must exist before children reference them
-const CREATE_ORDER: Array<[name: string, file: string]> = [
-  ["users", "tables/users.sql"],
-  ["tokens", "tables/tokens.sql"],
-  ["email_codes", "tables/email_codes.sql"],
-  ["email_rate_limits", "tables/email_rate_limits.sql"],
-  ["login_rate_limits", "tables/login_rate_limits.sql"],
-  ["sessions", "tables/sessions.sql"],
-  ["urls", "tables/urls.sql"],
-  ["ultra_codes", "tables/ultra_codes.sql"],
-  ["digit_codes", "tables/digit_codes.sql"],
-  ["views", "tables/views.sql"],
-  ["usernames", "tables/usernames.sql"],
-  ["rate_limits", "tables/rate_limits.sql"],
-];
+const CREATE_ORDER = TABLES.create;
 
 // Create the database if it doesn't exist
 export async function createDatabase() {
@@ -84,6 +64,7 @@ export async function applySchema(
   log("\nDropping the tables...");
   for (const name of DROP_ORDER) {
     if (name === "link_type_enum") {
+      // this is a TYPE, not a table
       await pool.query(`DROP TYPE IF EXISTS link_type_enum`);
     } else {
       await pool.query(`DROP TABLE IF EXISTS ${name} CASCADE`);
@@ -92,8 +73,8 @@ export async function applySchema(
   }
 
   log("\nCreating the tables...");
-  for (const [name, file] of CREATE_ORDER) {
-    await pool.query(read(file));
+  for (const name of CREATE_ORDER) {
+    await pool.query(read(`tables/${name}.sql`));
     log(`[postgres] ${name} table was created successfully.`);
   }
 

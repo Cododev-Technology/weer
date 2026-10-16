@@ -27,11 +27,6 @@ path = "src/janitor.rs"
 test = false
 
 [[bin]]
-name = "seed"
-path = "src/database/seed.rs"
-test = false
-
-[[bin]]
 name = "precompress"
 path = "src/precompress.rs"
 test = false
@@ -58,6 +53,11 @@ subtle = "2"
 aws-config = { version = "1", default-features = false, features = ["rt-tokio"] }
 aws-sdk-ses = { version = "1", default-features = false, features = ["rt-tokio"] }
 aws-smithy-http-client = { version = "1", default-features = false, features = ["rustls-ring"] }
+
+# build.rs turns the JSON5 files we share with the Node.js server into constants
+[build-dependencies]
+json5 = "1"
+serde_json = { version = "1", features = ["preserve_order"] }
 
 # The crates we depend on (Cpeak, the PostgreSQL client, ...) are optimized even in debug
 # builds, so `yarn dev` and the tests stay fast while our own code still compiles quickly.

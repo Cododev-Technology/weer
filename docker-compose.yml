@@ -33,7 +33,7 @@ services:
       redis:
         condition: service_healthy
     env_file:
-      - ./packages/server/.env
+      - ./packages/server-shared/.env
     environment:
       - SEED_DB
       - START_MODE
@@ -63,7 +63,7 @@ services:
       app:
         condition: service_started
     env_file:
-      - ./packages/server/.env
+      - ./packages/server-shared/.env
     environment:
       - DOCKER=true
       - DB_HOST=postgres

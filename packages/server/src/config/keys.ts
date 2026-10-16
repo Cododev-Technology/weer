@@ -30,6 +30,8 @@ export default {
   // Redis
   redisUrl: getEnv("REDIS_URL"),
   redisEnabled: getEnv("REDIS") === "true",
+  // server-turbo's Redis cluster (comma separated), which the seed flushes too
+  redisClusterNodes: getOptionalEnv("REDIS_CLUSTER_NODES"),
   // Show the warning page before redirecting to a domain that isn't on the allowlist
   redirectWarning: getOptionalEnv("REDIRECT_WARNING") !== "false",
   // Limit how many links, emails and logins a visitor or a user can make (see lib/rate-limit.ts)
