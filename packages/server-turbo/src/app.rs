@@ -1,16 +1,16 @@
 use std::sync::LazyLock;
-use std::time::{Instant, SystemTime};
+use std::time::SystemTime;
 
 use chrono::{DateTime, Utc};
 use cpeak::{
     AuthOptions, CompressionOptions, CookieParserOptions, Cpeak, CpeakOptions, FindToken,
-    RevokeToken, SaveToken, TokenRecord, auth, cookie_parser, json, parse_json, serve_static,
+    LogOptions, LogOutput, RequestLogOptions, RevokeToken, SaveToken, TokenRecord, auth,
+    cookie_parser, json, parse_json, serve_static,
 };
 
 use crate::config::keys::KEYS;
 use crate::database::index::POOL;
 use crate::database::types::{IToken, IUser};
-use crate::lib::log::log;
 use crate::redis::redis::check_connection;
 use crate::router::api_router;
 
@@ -31,6 +31,16 @@ pub fn app() -> Cpeak {
     let mut app = Cpeak::new(CpeakOptions {
         // What app.beforeEach(compression()) is in the Node.js version
         compression: Some(CompressionOptions::default()),
+        // A folder for each day in the logs folder: info.log and errors.log
+        log: Some(LogOptions {
+            output: LogOutput::File(
+                concat!(env!("CARGO_MANIFEST_DIR"), "/logs/{day}/info.log").to_string(),
+            ),
+            errors: LogOutput::File(
+                concat!(env!("CARGO_MANIFEST_DIR"), "/logs/{day}/errors.log").to_string(),
+            ),
+            ..Default::default()
+        }),
         ..Default::default()
     });
 
@@ -134,31 +144,14 @@ pub fn app() -> Cpeak {
         next()
     });
 
-    // Logging middleware
-    app.before_each(async |req, res, next| {
-        let request_start = Instant::now();
-        // Grab requester ip address
-        let ip = match req.headers.get("x-forwarded-for") {
-            Some(forwarded) if !forwarded.is_empty() => forwarded.clone(),
-            _ => req.remote_address.ip().to_string(),
-        };
-        let method = req.method.clone();
-        let url = req.url.clone();
-
-        // Once the request is finished
-        res.on_finish(move |res| {
-            // Get req status code and message
-            let (status_code, status_message) = (res.status_code, res.status_message);
-            // Calculate how much it took the request to finish
-            let processing_time = request_start.elapsed().as_millis();
-
-            // Format the log message and send it to log function
-            log(format!(
-                "{ip} -- {method} {url} {status_code} {status_message} -- response-time: {processing_time} ms"
-            ));
-        });
-        next()
-    });
+    // Logging middleware (REQUEST_LOG=false turns it off, for the load tests)
+    if KEYS.request_log {
+        app.before_each(cpeak::log_requests(RequestLogOptions {
+            format: "{date} -- {ip} -- {method} {url} {status} {status_message} -- response-time: {ms} ms".to_string(),
+            ip_header: Some("x-forwarded-for".to_string()),
+            ..Default::default()
+        }));
+    }
 
     // Show the home page
     app.route("get", "/", async |_req, res| {
@@ -197,7 +190,7 @@ pub fn app() -> Cpeak {
             res.status(status).json(json!({ "error": error.message }))
         } else {
             eprintln!("{error:?}");
-            log(&error);
+            cpeak::log(&error);
             res.status(500).json(json!({
                 "error": "Sorry, something unexpected happened from our side.",
             }))

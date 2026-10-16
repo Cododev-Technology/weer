@@ -1,5 +1,4 @@
 use server_turbo::app::app;
-use server_turbo::lib::log::log;
 
 fn main() {
     let port: u16 = std::env::var("PORT")
@@ -8,7 +7,7 @@ fn main() {
         .unwrap_or(2080);
 
     let server = app().listen(port, || {
-        log(format!(
+        cpeak::log(format!(
             "Starting the server...\n----------------------------------\nServer has started on port {port}\n----------------------------------"
         ));
         println!("Server is on port {port}");

@@ -39,7 +39,6 @@ pub mod lib {
     #[path = "link-definitions.rs"]
     pub mod link_definitions;
     pub mod links;
-    pub mod log;
     #[path = "rate-limit.rs"]
     pub mod rate_limit;
     pub mod util;

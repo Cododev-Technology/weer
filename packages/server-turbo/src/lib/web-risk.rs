@@ -3,7 +3,6 @@ use std::time::Duration;
 use cpeak::{CpeakError, Value};
 use url::form_urlencoded;
 
-use super::log::log;
 use super::util::FETCH;
 use crate::config::keys::KEYS;
 
@@ -41,8 +40,19 @@ pub async fn is_url_malicious(url: &str) -> bool {
             .send()
             .await?;
 
+        let status = res.status();
         let data: WebRiskResponse = res.json().await?;
-        println!("[web-risk] response for {url} {data}");
+        cpeak::log(format!("[web-risk] response for {url} {data}"));
+
+        // Not a 2xx (quota exceeded, bad key...): log it, it is an error even though the request worked
+        if !status.is_success() {
+            cpeak::log(&CpeakError::new(
+                status.as_u16(),
+                format!("[web-risk] {status} for {url}: {data}"),
+            ));
+            return Ok(false);
+        }
+
         Ok(!data["threat"].is_null())
     }
     .await;
@@ -51,7 +61,8 @@ pub async fn is_url_malicious(url: &str) -> bool {
         Ok(malicious) => malicious,
         Err(error) => {
             // API failure: a Web Risk outage or timeout should not block link creation.
-            log(&CpeakError::from(error));
+            // without_url() because the request URL has the API key in it
+            cpeak::log(&CpeakError::from(error.without_url()));
             false
         }
     }

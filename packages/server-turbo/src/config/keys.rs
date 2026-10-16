@@ -43,6 +43,8 @@ pub struct Keys {
     pub redirect_warning: bool,
     // Limit how many links, emails and logins a visitor or a user can make (see lib/rate-limit.rs)
     pub rate_limit: bool,
+    // Write a line to the info log for every request
+    pub request_log: bool,
 }
 
 pub static KEYS: LazyLock<Keys> = LazyLock::new(|| Keys {
@@ -81,4 +83,5 @@ pub static KEYS: LazyLock<Keys> = LazyLock::new(|| Keys {
     link_cache: get_optional_env("LINK_CACHE").as_deref() != Some("false"),
     redirect_warning: get_optional_env("REDIRECT_WARNING").as_deref() != Some("false"),
     rate_limit: get_optional_env("RATE_LIMIT").as_deref() != Some("false"),
+    request_log: get_optional_env("REQUEST_LOG").as_deref() != Some("false"),
 });

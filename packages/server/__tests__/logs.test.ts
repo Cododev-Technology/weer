@@ -27,7 +27,7 @@ describe("Logs", () => {
     assert.match(
       await requestLine(id),
       new RegExp(
-        `^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} -- ::ffff:127\\.0\\.0\\.1 -- GET /auth/status\\?${id} 200 OK -- response-time: \\d+ ms$`
+        `^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} -- ::ffff:127\\.0\\.0\\.1 -- GET /auth/status\\?${id} 200 OK -- response-time: \\d+\\.\\d{2} ms$`
       )
     );
   });
@@ -119,7 +119,7 @@ describe("Unexpected errors", () => {
     assert.match(
       log,
       new RegExp(
-        `^-{39}\\n\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\nError Name: error\\nError Message: ${message}\\nError Stack:\\n[^]+\\n-{39}\\n$`
+        `^-{39}\\n\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\nError Name: (error\\nError Message: ${message}|Error\\nError Message: error returned from database: ${message}[^\\n]*)\\nError Stack:\\n[^]+\\n-{39}\\n$`
       )
     );
   });

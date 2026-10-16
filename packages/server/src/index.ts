@@ -1,5 +1,5 @@
 import app from "./app.js";
-import log from "./lib/log.js";
+import { log } from "cpeak";
 import keys from "./config/keys.js";
 
 const port = Number(process.env.PORT || 2080);

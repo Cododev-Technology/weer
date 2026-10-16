@@ -81,7 +81,12 @@ mod logs {
                 .and_then(|line| line.strip_suffix(" ms"))
                 .unwrap_or_else(|| panic!("{line:?} is not the line of the request"));
             assert!(!response_time.is_empty());
-            assert!(response_time.bytes().all(|byte| byte.is_ascii_digit()));
+            // With two decimals
+            let (whole, decimals) = response_time
+                .split_once('.')
+                .unwrap_or_else(|| panic!("{response_time:?} has no decimals"));
+            assert!(!whole.is_empty() && whole.bytes().all(|byte| byte.is_ascii_digit()));
+            assert!(decimals.len() == 2 && decimals.bytes().all(|byte| byte.is_ascii_digit()));
         });
     }
 
@@ -196,7 +201,15 @@ mod unexpected_errors {
             let message = r#"new row for relation "urls" violates check constraint "chk_owner""#;
             let log = wait_for_log("errors.log", message, from).await;
 
-            assert_logged_error(&log, "error", message);
+            // pg (Node.js) calls it "error". sqlx (Rust) has no name for it, and puts more
+            // around the message of PostgreSQL.
+            if log.contains("\nError Name: error\n") {
+                assert_logged_error(&log, "error", message);
+            } else {
+                assert!(log.contains(&format!(
+                    "\nError Name: Error\nError Message: error returned from database: {message}"
+                )));
+            }
         });
     }
 

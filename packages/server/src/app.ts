@@ -1,16 +1,23 @@
-import cpeak, { serveStatic, parseJSON, cookieParser, auth } from "cpeak";
+import cpeak, { serveStatic, parseJSON, cookieParser, auth, log } from "cpeak";
 import type { CpeakRequest as Request, CpeakResponse as Response } from "cpeak";
 
 import path from "path";
 import compression from "compression";
 import helmet from "helmet";
 
-import log from "./lib/log.js";
 import keys from "./config/keys.js";
 import apiRouter from "./router.js";
 import { DB } from "./database/index.js";
 
-const app = cpeak();
+const logsPath = new URL("../logs", import.meta.url).pathname;
+
+const app = cpeak({
+  // A folder for each day in the logs folder: info.log and errors.log
+  log: {
+    output: { file: logsPath + "/{day}/info.log" },
+    errors: { file: logsPath + "/{day}/errors.log" },
+  },
+});
 
 // For parsing JSON body
 app.beforeEach(parseJSON());
@@ -90,37 +97,16 @@ app.beforeEach(async (req, res, next) => {
   next();
 });
 
-// Logging middleware
-app.beforeEach((req, res, next) => {
-  const requestStart = Date.now();
-  // Grab requester ip address
-  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-
-  // Once the request is finished
-  res.on("finish", () => {
-    // Get req status code and message
-    const { statusCode, statusMessage } = res;
-    // Calculate how much it took the request to finish
-    const processingTime = Date.now() - requestStart;
-
-    // Format the log message and send it to log function
-    log(
-      ip +
-        " -- " +
-        req.method +
-        " " +
-        req.url +
-        " " +
-        statusCode +
-        " " +
-        statusMessage +
-        " -- response-time: " +
-        processingTime +
-        " ms"
-    );
-  });
-  next();
-});
+// Logging middleware (REQUEST_LOG=false turns it off, for the load tests)
+if (keys.requestLog) {
+  app.beforeEach(
+    log.requests({
+      format:
+        "{date} -- {ip} -- {method} {url} {status} {status_message} -- response-time: {ms} ms",
+      ipHeader: "x-forwarded-for",
+    })
+  );
+}
 
 // Show the home page
 app.route("get", "/", (req: Request, res: Response) => {

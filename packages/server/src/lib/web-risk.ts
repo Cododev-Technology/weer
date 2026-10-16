@@ -1,5 +1,5 @@
 import keys from "../config/keys.js";
-import log from "./log.js";
+import { log } from "cpeak";
 
 const WEB_RISK_URL = "https://webrisk.googleapis.com/v1/uris:search";
 const THREAT_TYPES = [
@@ -29,7 +29,14 @@ export async function isUrlMalicious(url: string): Promise<boolean> {
     });
 
     const data = (await res.json()) as WebRiskResponse;
-    console.log("[web-risk] response for", url, JSON.stringify(data));
+    log(`[web-risk] response for ${url} ${JSON.stringify(data)}`);
+
+    // Not a 2xx (quota exceeded, bad key...): log it, it is an error even though the request worked
+    if (!res.ok) {
+      log(new Error(`[web-risk] ${res.status} for ${url}: ${JSON.stringify(data)}`));
+      return false;
+    }
+
     return Boolean(data.threat);
   } catch (error) {
     // API failure: a Web Risk outage or timeout should not block link creation.

@@ -34,4 +34,6 @@ export default {
   redirectWarning: getOptionalEnv("REDIRECT_WARNING") !== "false",
   // Limit how many links, emails and logins a visitor or a user can make (see lib/rate-limit.ts)
   rateLimit: getOptionalEnv("RATE_LIMIT") !== "false",
+  // Write a line to the info log for every request
+  requestLog: getOptionalEnv("REQUEST_LOG") !== "false",
 };

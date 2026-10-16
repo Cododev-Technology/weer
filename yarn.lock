@@ -3111,10 +3111,10 @@ core-util-is@~1.0.0:
   resolved "https://registry.npmjs.org/core-util-is/-/core-util-is-1.0.3.tgz"
   integrity sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==
 
-cpeak@2.9.2:
-  version "2.9.2"
-  resolved "https://registry.yarnpkg.com/cpeak/-/cpeak-2.9.2.tgz#703f5f01b03b5cc454f615c850e440fef3c2216a"
-  integrity sha512-vYHJlvYbQJVz4JjedR8PzyjhND2NminFxbAFgVVsY/+C3MuXlb2VAL+UElt1UQ5E2EvV7e+fuo3rjtA8+QCQrg==
+cpeak@2.10.0:
+  version "2.10.0"
+  resolved "https://registry.yarnpkg.com/cpeak/-/cpeak-2.10.0.tgz#23ef410cc34200bd4895bd47a0510d96f9685288"
+  integrity sha512-v01uRJ6/JWxCwMhca4xNmTfIwPoacfWP+UTYa0BGPnpdJ9HfZ6ORVLWYYnh0+VEANftaD/h83lQc0Ooa9KKImQ==
 
 cross-argv@^2.0.0:
   version "2.0.0"
