@@ -8,6 +8,8 @@
     "outDir": "./dist",
     "declaration": true,
     "strict": true,
+    "resolveJsonModule": true,
     "allowJs": true
-  }
+  },
+  "include": ["src", "src/config/*.json"]
 }

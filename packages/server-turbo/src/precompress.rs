@@ -1,5 +1,5 @@
-// The web and styles packages build into the public folder of the Node.js server, so both servers serve that one
-const PUBLIC_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../server/public");
+// The web and styles packages build into the public folder of server-shared, so both servers serve that one
+const PUBLIC_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../server-shared/public");
 
 // Writes the .br and .gz copies of the files in the public folder, which the server then
 // sends as they are instead of compressing a file again for every request

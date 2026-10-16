@@ -10,7 +10,8 @@ import { VIEWS_STREAM_KEY } from "../src/redis/views-stream.js";
 import keys from "../src/config/keys.js";
 import { createUser } from "./helpers/factories/user.js";
 
-const publicPath = new URL("../public", import.meta.url).pathname;
+const publicPath = new URL("../../server-shared/public", import.meta.url)
+  .pathname;
 
 // A destination on the domain allowlist, and one that is not
 const TRUSTED_URL = "https://github.com/agile8118/weer";

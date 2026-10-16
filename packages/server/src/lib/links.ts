@@ -13,9 +13,8 @@ import type {
   IDigitCode,
 } from "../database/types.js";
 import crypto from "crypto";
-import { LINKS } from "./link-definitions.js";
 import type { LinkType } from "@weer/common";
-import { isValidCustomCode, isValidAffixCode } from "@weer/common";
+import { LINKS, isValidCustomCode, isValidAffixCode } from "@weer/common";
 
 const MAX_ATTEMPTS = 10; // Max number of retries for generating unique IDs (QR Code and Shortened URL id)
 

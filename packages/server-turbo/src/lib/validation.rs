@@ -2,6 +2,8 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
+use super::link_definitions::LINKS;
+
 // The checks of packages/common/src/validation.ts (@weer/common), which the front end runs
 // on the same values before it sends them
 
@@ -37,9 +39,9 @@ fn has_code_charset(code: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
 }
 
-pub const CUSTOM_CODE_MIN_LENGTH: usize = 7;
-pub const AFFIX_CODE_MIN_LENGTH: usize = 1;
-pub const CODE_MAX_LENGTH: usize = 80;
+pub const CUSTOM_CODE_MIN_LENGTH: usize = LINKS.custom.min_length;
+pub const AFFIX_CODE_MIN_LENGTH: usize = LINKS.affix.min_length;
+pub const CODE_MAX_LENGTH: usize = LINKS.custom.max_length;
 
 pub fn is_valid_custom_code(code: &str) -> bool {
     (CUSTOM_CODE_MIN_LENGTH..=CODE_MAX_LENGTH).contains(&code.chars().count())
@@ -51,8 +53,9 @@ pub fn is_valid_affix_code(code: &str) -> bool {
         && has_code_charset(code)
 }
 
-pub const USERNAME_MIN_LENGTH: usize = 1;
-pub const USERNAME_MAX_LENGTH: usize = 30;
+// (USERNAME_MIN_LENGTH and USERNAME_MAX_LENGTH, from packages/common/config/username.json5,
+// written by build.rs)
+include!(concat!(env!("OUT_DIR"), "/username.rs"));
 
 pub fn is_valid_username(username: &str) -> bool {
     (USERNAME_MIN_LENGTH..=USERNAME_MAX_LENGTH).contains(&username.chars().count())

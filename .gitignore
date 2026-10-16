@@ -10,17 +10,19 @@ node_modules
 .env
 deploy.sh
 logs
+todo.md
 
 # Build files
-packages/server/public/styles.css
-packages/server/public/styles.css.map
-packages/server/public/style.comp.css
-packages/server/public/style.comp.css.map
-packages/server/public/scripts
-packages/server/public/**/*.br
-packages/server/public/**/*.gz
+packages/server-shared/public/styles.css
+packages/server-shared/public/styles.css.map
+packages/server-shared/public/style.comp.css
+packages/server-shared/public/style.comp.css.map
+packages/server-shared/public/scripts
+packages/server-shared/public/**/*.br
+packages/server-shared/public/**/*.gz
 packages/reusable/dist
 packages/common/dist
+packages/common/src/config
 packages/server/dist
 packages/server-turbo/target
 

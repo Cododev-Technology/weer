@@ -1,25 +1,4 @@
-import type { LinkType } from "@weer/common";
-import {
-  CUSTOM_CODE_MIN_LENGTH,
-  AFFIX_CODE_MIN_LENGTH,
-  CODE_MAX_LENGTH,
-} from "@weer/common";
-
-// Static top-level route segments registered in router.ts. A "custom" code or
-// a username occupying these would collide with a real route.
-export const RESERVED_ROUTE_SEGMENTS = [
-  "auth",
-  "logout",
-  "user",
-  "url",
-  "qr",
-  "q",
-  "redirect-warning",
-];
-
-/** @TODO maybe send this data to client for the customization model to show the data dynamically */
-// This should be our single source of truth for link types and their properties
-export const LINKS: Record<LinkType, any> = {
+{
   classic: {
     // name: "6-Character Code",
     // example: "Example: <span>weer.pro/f3hc42</span>",
@@ -59,7 +38,7 @@ export const LINKS: Record<LinkType, any> = {
       o: "0",
       l: "i",
     },
-    validFor: 30 * 60 * 1000, // 30 minutes in milliseconds
+    validFor: 1800000, // 30 minutes in milliseconds
   },
   digit: {
     // name: "Short Numeric Code (3-5 Digits)",
@@ -81,17 +60,19 @@ export const LINKS: Record<LinkType, any> = {
       // This means convert the 'key' property to the 'value' property when redirecting (e.g. O -> 0)
       o: "0",
     },
-    validFor: 2 * 60 * 60 * 1000, // 2 hours in milliseconds
+    validFor: 7200000, // 2 hours in milliseconds
   },
   custom: {
-    minLength: CUSTOM_CODE_MIN_LENGTH,
-    maxLength: CODE_MAX_LENGTH,
+    minLength: 7,
+    maxLength: 80,
     requiresAuth: false,
-    reservedWords: RESERVED_ROUTE_SEGMENTS,
+    // Static top-level route segments registered in router.ts (router.rs in server-turbo). A "custom" code or
+    // a username occupying these would collide with a real route.
+    reservedWords: ["auth", "logout", "user", "url", "qr", "q", "redirect-warning"],
   },
   affix: {
-    minLength: AFFIX_CODE_MIN_LENGTH,
-    maxLength: CODE_MAX_LENGTH,
+    minLength: 1,
+    maxLength: 80,
     requiresAuth: true,
   },
   qr: {
@@ -99,4 +80,4 @@ export const LINKS: Record<LinkType, any> = {
     length: 10, // 10 characters long when in base64url (7 bytes)
     size: 7, // 7 bytes = 56 bits of entropy
   },
-};
+}

@@ -4,7 +4,8 @@ import request from "supertest";
 import { describe, it } from "mocha";
 import app from "./helpers/target.js";
 
-const publicPath = new URL("../public", import.meta.url).pathname;
+const publicPath = new URL("../../server-shared/public", import.meta.url)
+  .pathname;
 
 const read = (file: string) => fs.readFileSync(publicPath + file);
 

@@ -5,12 +5,15 @@ import keys from "../../config/keys.js";
 
 const ses = new SESClient({ region: keys.sesRegion });
 
-const TEMPLATES_DIR = path.join(path.resolve(), "src/lib/email/templates");
+const TEMPLATES_DIR = path.join(
+  path.resolve(),
+  "../server-shared/email-templates"
+);
 
 type HtmlTemplate = { htmlFile: string; templateData: Record<string, unknown> };
 
 // Sends an HTML email via SES. Pass a raw HTML string or a { htmlFile, templateData }
-// object to render a template from './templates' using cpeak's render.string.
+// object to render a template from '../server-shared/email-templates' using cpeak's render.string.
 const sendEmail = async (
   to: string,
   subject: string,

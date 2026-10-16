@@ -14,7 +14,7 @@ Pick the setup method that fits your use case. Uou only need one:
 
 1. Copy the example environment file and fill in your values:
    ```
-   cp packages/server/.env.example packages/server/.env
+   cp packages/server-shared/.env.example packages/server-shared/.env
    ```
 2. Run the setup script:
    ```
@@ -32,7 +32,7 @@ The script will prompt you to seed the database (required on first run) and choo
 Set your environment variables either via AWS Parameter Store or by copying the example file:
 
 ```
-cp packages/server/.env.example packages/server/.env
+cp packages/server-shared/.env.example packages/server-shared/.env
 ```
 
 Then:
@@ -52,7 +52,7 @@ yarn start
 
 1. Copy the example environment file and fill in your values:
    ```
-   cp packages/server/.env.example packages/server/.env
+   cp packages/server-shared/.env.example packages/server-shared/.env
    ```
 2. First-time setup (install, build, seed):
    ```

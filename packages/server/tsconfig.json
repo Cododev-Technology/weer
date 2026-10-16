@@ -4,6 +4,7 @@
     "lib": ["ES2022"],
     "module": "NodeNext",
     "strict": true,
+    "resolveJsonModule": true,
 
     "declaration": true,
     "declarationMap": false,

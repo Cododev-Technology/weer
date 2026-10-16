@@ -1,5 +1,10 @@
 import type { CpeakRequest as Request, CpeakResponse as Response } from "cpeak";
-import { isValidEmail, isValidPassword, isValidUsername } from "@weer/common";
+import {
+  isValidEmail,
+  isValidPassword,
+  isValidUsername,
+  RESERVED_ROUTE_SEGMENTS,
+} from "@weer/common";
 import type { API } from "@weer/common";
 import crypto from "crypto";
 
@@ -8,7 +13,6 @@ import type { IUser, IUsername } from "../database/types.js";
 import sendEmail from "../lib/email/index.js";
 import { enforceEmailCooldown, enforceIpLimit } from "../lib/rate-limit.js";
 import { verifyEmailCode } from "../lib/email-codes.js";
-import { RESERVED_ROUTE_SEGMENTS } from "../lib/link-definitions.js";
 import util from "../lib/util.js";
 
 const CODE_EXPIRY_MINUTES = 10;

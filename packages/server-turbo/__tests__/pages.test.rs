@@ -6,7 +6,7 @@ use crate::helpers::supertest::request;
 use crate::helpers::target::app;
 use crate::setup_each_test::test;
 
-const PUBLIC_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../server/public");
+const PUBLIC_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../server-shared/public");
 
 fn read(file: &str) -> Vec<u8> {
     fs::read(format!("{PUBLIC_PATH}{file}")).unwrap()

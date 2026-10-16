@@ -15,10 +15,11 @@ This is a yarn project and all project commands should be run with `yarn`.
 ```
 packages/
   server/        # Cpeak/Node.js backend API
-  server-turbo/  # Cpeak/Rust port of server/ (serves the same server/public/)
-  web/           # React frontend (compiled to server/public/scripts/)
-  styles/        # SASS → CSS pipeline (compiled to server/public/styles.css)
-  common/        # Shared TypeScript types (LinkType enum, etc.)
+  server-turbo/  # Cpeak/Rust port of server/
+  server-shared/ # Files both servers share: .env, env.sh, SQL tables, email templates, public/
+  web/           # React frontend (compiled to server-shared/public/scripts/)
+  styles/        # SASS → CSS pipeline (compiled to server-shared/public/styles.css)
+  common/        # Shared TypeScript types (LinkType enum, etc.) and config/ (JSON5 link definitions, username limits, domain allowlist)
   reusable/      # Shared React component library
 ```
 
@@ -75,7 +76,7 @@ cd packages/web && yarn test
 ### Building (production)
 
 ```bash
-# Build everything in dependency order: reusable → common → web → styles → server → server-turbo's precompress (.br/.gz copies of server/public/)
+# Build everything in dependency order: reusable → common → web → styles → server → server-turbo's precompress (.br/.gz copies of server-shared/public/)
 yarn build   # from root
 
 # Build individual packages
@@ -98,7 +99,7 @@ cd packages/server-turbo && yarn seed
 
 ### Request Flow
 
-1. Static assets (HTML, CSS, JS bundle) served from `packages/server/public/`
+1. Static assets (HTML, CSS, JS bundle) served from `packages/server-shared/public/`
 2. All API routes defined in `packages/server/src/router.ts` and handled by controllers in `src/controllers/`
 3. Redirect routes (`/:id`, `/:username/:id`, `/q/:id`) hit the database and issue HTTP redirects
 4. Auth via Google OAuth 2.0 using Passport.js; sessions stored in cookies via `cookie-session`
@@ -114,11 +115,11 @@ The core domain concept is `LinkType` (defined in `packages/common/src/types.ts`
 - **digit** — numeric code
 - **qr** — QR code based link
 
-Link generation logic lives in `packages/server/src/lib/links.ts`. URL controller logic (creation, type changes) is in `packages/server/src/controllers/url.ts`.
+Link generation logic lives in `packages/server/src/lib/links.ts`. The properties of each link type (`LINKS`) are in `packages/common/config/links.json5`: common's build turns it into JSON for the web and the Node.js server, and server-turbo's `build.rs` turns it into Rust constants. URL controller logic (creation, type changes) is in `packages/server/src/controllers/url.ts`.
 
 ### Database
 
-PostgreSQL with a connection pool defined in `packages/server/src/database/index.ts`. Schema SQL files are in `src/database/tables/`. No ORM — raw SQL queries throughout. Study the packages/server/src/database/index.ts file before dealing with any database-related code.
+PostgreSQL with a connection pool defined in `packages/server/src/database/index.ts`. Schema SQL files are in `packages/server-shared/database/tables/`. No ORM — raw SQL queries throughout. Study the packages/server/src/database/index.ts file before dealing with any database-related code.
 
 ### Configuration
 

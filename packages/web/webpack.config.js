@@ -5,7 +5,7 @@ module.exports = {
   output: {
     filename: "app.js",
     chunkFilename: "[name].bundle.js",
-    path: path.resolve(__dirname, "../server/public/scripts"),
+    path: path.resolve(__dirname, "../server-shared/public/scripts"),
   },
   devtool: "inline-source-map",
   module: {

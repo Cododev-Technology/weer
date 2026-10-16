@@ -2,7 +2,7 @@
 // file to be listed as a module, and for this app that is all done here, so the files
 // themselves can read like the ones of the Node.js version (packages/server).
 //
-// index.rs, janitor.rs, precompress.rs and database/seed.rs are not in this list. Those are the programs you
+// index.rs, janitor.rs and precompress.rs are not in this list. Those are the programs you
 // run (the [[bin]]s in Cargo.toml), and they import everything else from here.
 //
 // There is no cluster.rs: Cpeak for Rust runs an event loop on every CPU core by itself.

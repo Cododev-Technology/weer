@@ -15,7 +15,7 @@ use crate::helpers::target::app;
 use crate::helpers::views::{last_views, streams_length};
 use crate::setup_each_test::test;
 
-const PUBLIC_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../server/public");
+const PUBLIC_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../server-shared/public");
 
 // A destination on the domain allowlist, and one that is not
 const TRUSTED_URL: &str = "https://github.com/agile8118/weer";

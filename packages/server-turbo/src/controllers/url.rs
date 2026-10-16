@@ -26,8 +26,8 @@ use crate::middlewares::session_token;
 use crate::redis::links_cache;
 use crate::redis::views_stream::{IViewEvent, push as push_view};
 
-// The web and styles packages build into the public folder of the Node.js server, so both servers serve that one
-const PUBLIC_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../server/public");
+// The web and styles packages build into the public folder of server-shared, so both servers serve that one
+const PUBLIC_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../server-shared/public");
 
 // Helper functions to check affix code availability
 async fn is_affix_available(code: Option<&str>, user_id: Option<i32>) -> Result<bool, CpeakError> {
