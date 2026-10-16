@@ -1,0 +1,37 @@
+# .bashrc
+
+PS1='\[\033[01;33m\](\u)\[\033[00m\]:\[\033[01;34m\]\W\[\033[00m\] '
+
+# General
+alias ls='ls --color=auto'
+alias sconfig='vim ~/.bashrc && . ~/.bashrc'
+
+# Git
+alias gs="git status"
+
+# NGINX
+nginx-conf() {
+        cd /etc/nginx/conf.d
+}
+
+# System Stats
+alias cpu-usage='mpstat 1'
+alias memory-usage='free -h --human'
+alias disk-free='df -h'
+alias disk-speed='watch -n 1 "sudo iotop -b -n 1 | head -n 2"'
+alias net-usage-graph='nload -u H -U H eno1'
+alias net-usage='ifstat -i ens5 1'
+alias folder-size='du -sh'
+
+alias postgres='sudo -u postgres psql'
+
+
+# Usage: file-size file.txt
+#        file-size file.txt -a (-a meaning accurate)
+file-size() {
+    if [ "$2" = "-a" ]; then
+        echo "$(du -b "$1" | cut -f1) bytes"
+    else
+        du -bh "$1"
+    fi
+}
