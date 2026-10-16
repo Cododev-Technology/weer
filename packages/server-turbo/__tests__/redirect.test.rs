@@ -6,6 +6,7 @@ use cpeak::{Value, json};
 use server_turbo::config::keys::KEYS;
 use server_turbo::database::index::POOL;
 use server_turbo::database::types::{IView, LinkType};
+use server_turbo::redis::redis::connection;
 
 use crate::helpers::factories::url::url_id;
 use crate::helpers::factories::user::create_user;
@@ -472,6 +473,91 @@ mod the_redirect_warning_page {
                 assert_eq!(res.status_code, 200, "{query}");
                 assert_eq!(res.text, json!({ "realUrl": null }).to_string(), "{query}");
             }
+        });
+    }
+}
+
+// A classic link that was visited is saved in Redis (see redis/links-cache.rs). These pass
+// without Redis too: then they just check the database.
+mod a_link_that_was_visited_before {
+    use super::*;
+
+    // Visits the link, and waits until Redis has it (the redirect doesn't wait for that)
+    async fn visit(code: &str) {
+        request(app()).get(&format!("/{code}")).await;
+
+        if KEYS.redis_enabled && KEYS.link_cache {
+            for _ in 0..100 {
+                let saved: Option<String> = redis::cmd("GET")
+                    .arg(format!("weer:link:{code}"))
+                    .query_async(&mut connection())
+                    .await
+                    .unwrap();
+                if saved.is_some() {
+                    return;
+                }
+                cpeak::sleep(std::time::Duration::from_millis(10)).await;
+            }
+            panic!("the link was never saved in Redis");
+        }
+    }
+
+    #[test]
+    fn should_go_to_its_new_destination_once_it_changes() {
+        test(async {
+            let agent = anonymous().await;
+            let link = create_link(&agent, "classic", TRUSTED_URL).await;
+            let code = link["code"].as_str().unwrap();
+            visit(code).await;
+
+            let new_url = format!("{TRUSTED_URL}/pulls");
+            let edited = agent
+                .patch(&format!("/url/{}/real-url", link["URLId"]))
+                .send(json!({ "url": new_url }))
+                .await;
+            assert_eq!(edited.status_code, 200);
+
+            let res = request(app()).get(&format!("/{code}")).await;
+            assert_eq!(res.header("location"), Some(new_url.as_str()));
+        });
+    }
+
+    #[test]
+    fn should_be_gone_once_it_is_deleted() {
+        test(async {
+            let agent = anonymous().await;
+            let link = create_link(&agent, "classic", TRUSTED_URL).await;
+            let code = link["code"].as_str().unwrap();
+            visit(code).await;
+
+            let deleted = agent.delete(&format!("/url/{}", link["URLId"])).await;
+            assert_eq!(deleted.status_code, 200);
+
+            let res = request(app()).get(&format!("/{code}")).await;
+            assert_eq!(res.text, page("/404.html"));
+        });
+    }
+
+    #[test]
+    fn should_not_be_found_on_its_old_code_once_it_gets_a_new_one() {
+        test(async {
+            let agent = anonymous().await;
+            let link = create_link(&agent, "classic", TRUSTED_URL).await;
+            let old_code = link["code"].as_str().unwrap();
+            visit(old_code).await;
+
+            let changed = agent
+                .patch(&format!("/url/{}/type", link["URLId"]))
+                .send(json!({ "type": "classic" }))
+                .await;
+            let new_code = changed.body["code"].as_str().unwrap();
+            assert_ne!(new_code, old_code);
+
+            let old = request(app()).get(&format!("/{old_code}")).await;
+            assert_eq!(old.text, page("/404.html"));
+
+            let new = request(app()).get(&format!("/{new_code}")).await;
+            assert_eq!(new.header("location"), Some(TRUSTED_URL));
         });
     }
 }

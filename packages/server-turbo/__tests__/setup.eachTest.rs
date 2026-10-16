@@ -1,11 +1,22 @@
 use std::future::Future;
 use std::sync::Mutex;
 
+use server_turbo::config::keys::KEYS;
 use server_turbo::database::index::POOL;
 use server_turbo::database::schema::truncate_all;
+use server_turbo::redis::redis::connection;
 
 async fn before_each() {
     truncate_all(&POOL).await.unwrap();
+
+    // The links saved in Redis belong to the links that were just deleted, and a new link can
+    // get the same code (and the same id)
+    if KEYS.redis_enabled {
+        redis::cmd("FLUSHDB")
+            .query_async::<String>(&mut connection())
+            .await
+            .unwrap();
+    }
 }
 
 // (the `after` hook of the Node.js version closes the pool and Redis so mocha can stop. cargo

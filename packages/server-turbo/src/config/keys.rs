@@ -37,6 +37,8 @@ pub struct Keys {
     pub redis_cluster_nodes: Vec<String>,
     // How many streams the views are spread over, so they land on more than one node
     pub views_stream_shards: u32,
+    // Save the links in Redis once they're visited, so the next visits skip the database
+    pub link_cache: bool,
     // Show the warning page before redirecting to a domain that isn't on the allowlist
     pub redirect_warning: bool,
     // Limit how many links, emails and logins a visitor or a user can make (see lib/rate-limit.rs)
@@ -76,6 +78,7 @@ pub static KEYS: LazyLock<Keys> = LazyLock::new(|| Keys {
         .and_then(|shards| shards.parse().ok())
         .filter(|shards| *shards > 0)
         .unwrap_or(16),
+    link_cache: get_optional_env("LINK_CACHE").as_deref() != Some("false"),
     redirect_warning: get_optional_env("REDIRECT_WARNING").as_deref() != Some("false"),
     rate_limit: get_optional_env("RATE_LIMIT").as_deref() != Some("false"),
 });

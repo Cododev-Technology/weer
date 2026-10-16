@@ -23,6 +23,7 @@ use crate::lib::links::{
 use crate::lib::rate_limit::refund_user_credit;
 use crate::lib::util::{self, to_iso_string};
 use crate::middlewares::session_token;
+use crate::redis::links_cache;
 use crate::redis::views_stream::{IViewEvent, push as push_view};
 
 // The web and styles packages build into the public folder of the Node.js server, so both servers serve that one
@@ -284,7 +285,12 @@ pub async fn change_url_type(
             .json(json!({ "message": "Missing parameters" }));
     }
 
-    match change_url_type_internal(req, res, id, new_type).await {
+    let cached_code = links_cache::code_of(id).await?;
+    let changed = change_url_type_internal(req, res, id, new_type).await;
+    // The old code is gone (or, if this failed half way, might be), so it can't stay saved
+    links_cache::forget(cached_code).await;
+
+    match changed {
         Ok(()) => Ok(()),
         Err(error) => {
             // rate_limit_url already spent a credit for this, refund it on error
@@ -493,12 +499,26 @@ async fn resolve_url_record(
             .await?
         }
         LinkType::Classic => {
-            sqlx::query_as::<_, IUrl>(
+            // Saved in Redis once it's been visited (see redis/links-cache.rs)
+            if links_cache::is_enabled()
+                && let Some(url) = links_cache::get(&processed_code.code).await
+            {
+                return Ok(Some(url));
+            }
+
+            let url = sqlx::query_as::<_, IUrl>(
                 "SELECT real_url, id, link_type FROM urls WHERE shortened_url_id=$1",
             )
             .bind(&processed_code.code)
             .fetch_optional(&*POOL)
-            .await?
+            .await?;
+
+            if links_cache::is_enabled()
+                && let Some(url) = &url
+            {
+                links_cache::set(&processed_code.code, url);
+            }
+            url
         }
         LinkType::Digit => {
             sqlx::query_as::<_, IUrl>(
@@ -682,10 +702,15 @@ pub async fn redirect_warning_data(
 
 // Delete a url record
 pub async fn remove(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result<(), CpeakError> {
+    let id = req.params["id"].parse::<i32>().unwrap_or(0);
+    let cached_code = links_cache::code_of(id).await?;
+
     sqlx::query("DELETE FROM urls WHERE id=$1")
-        .bind(req.params["id"].parse::<i32>().unwrap_or(0))
+        .bind(id)
         .execute(&*POOL)
         .await?;
+
+    links_cache::forget(cached_code).await;
     res.json(json!({ "message": "deleted" }))
 }
 
@@ -826,11 +851,15 @@ pub async fn update_real_url(
         return Err(CpeakError::new(400, "Missing parameters"));
     }
 
+    let cached_code = links_cache::code_of(id).await?;
+
     sqlx::query("UPDATE urls SET real_url = $1 WHERE id = $2")
         .bind(new_real_url.as_str())
         .bind(id)
         .execute(&*POOL)
         .await?;
+
+    links_cache::forget(cached_code).await;
 
     res.json(json!({ "realUrl": new_real_url }))
 }

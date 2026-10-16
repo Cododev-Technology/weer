@@ -50,6 +50,8 @@ pub mod lib {
 
 pub mod redis {
     // (redis/redis.rs, like redis/redis.ts in the Node.js version)
+    #[path = "links-cache.rs"]
+    pub mod links_cache;
     #[allow(clippy::module_inception)]
     pub mod redis;
     #[path = "views-stream.rs"]
