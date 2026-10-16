@@ -5,13 +5,12 @@ use cpeak::json;
 use server_turbo::config::keys::KEYS;
 use server_turbo::database::index::POOL;
 use server_turbo::database::types::LinkType;
-use server_turbo::redis::redis::REDIS;
-use server_turbo::redis::views_stream::VIEWS_STREAM_KEY;
 
 use crate::helpers::assert::assert_iso_date;
 use crate::helpers::factories::url::url_id;
 use crate::helpers::supertest::{Agent, request};
 use crate::helpers::target::app;
+use crate::helpers::views::last_views;
 use crate::setup_each_test::test;
 
 // A destination on the domain allowlist, so the server never has to ask the Web Risk API about it
@@ -136,11 +135,7 @@ mod getting_the_stats_of_a_url {
 
             // With Redis, the views wait in a stream for the janitor to save them (see janitor.rs)
             if KEYS.redis_enabled {
-                let entries: Vec<(String, Vec<String>)> = redis::cmd("XREVRANGE")
-                    .arg((VIEWS_STREAM_KEY, "+", "-", "COUNT", 3))
-                    .query_async(&mut REDIS.clone())
-                    .await
-                    .unwrap();
+                let entries = last_views(3).await;
                 let views: Vec<String> =
                     entries.iter().map(|(_, fields)| fields.join(" ")).collect();
 

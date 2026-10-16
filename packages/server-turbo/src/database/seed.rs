@@ -7,7 +7,7 @@ use cpeak::CpeakError;
 use server_turbo::config::keys::KEYS;
 use server_turbo::database::index::new_pool;
 use server_turbo::database::schema::{Opts, apply_schema, create_database, seed_codes};
-use server_turbo::redis::redis::REDIS;
+use server_turbo::redis::redis::connection;
 
 const DATABASE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/database");
 
@@ -51,11 +51,11 @@ async fn seed() -> Result<(), CpeakError> {
     seed_codes(&pool, Opts { verbose: true }).await?;
 
     // Now flush redis to clear any existing data in case the same database is being reused.
-    // Only do this if Redis is enabled.
+    // Only do this if Redis is enabled. (In a cluster, FLUSHDB goes to every master node.)
     let flushing = KEYS.redis_enabled.then(|| {
         cpeak::spawn(async {
             match redis::cmd("FLUSHDB")
-                .query_async::<String>(&mut REDIS.clone())
+                .query_async::<String>(&mut connection())
                 .await
             {
                 Ok(_) => {

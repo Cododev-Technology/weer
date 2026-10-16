@@ -1,4 +1,7 @@
-use super::redis::REDIS;
+use std::cell::Cell;
+
+use super::redis::connection;
+use crate::config::keys::KEYS;
 use crate::database::types::LinkType;
 
 pub struct IViewEvent {
@@ -11,9 +14,27 @@ pub struct IViewEvent {
     pub visitor_hash: String,
 }
 
-pub const VIEWS_STREAM_KEY: &str = "weer:stream:views";
+// The views are spread over KEYS.views_stream_shards streams (weer:stream:views:0,
+// weer:stream:views:1, ...). In a cluster a key lives on one node, so with one stream, every
+// view would go to the same node.
+pub fn views_stream_key(shard: u32) -> String {
+    format!("weer:stream:views:{shard}")
+}
 
-// Cap the stream length — janitor drains it every second, so this is just a safety net
+thread_local! {
+    // The stream that the next view of this thread goes to. Each thread goes around all of them.
+    static NEXT_SHARD: Cell<u32> = const { Cell::new(0) };
+}
+
+fn next_shard() -> u32 {
+    NEXT_SHARD.with(|next| {
+        let shard = next.get() % KEYS.views_stream_shards;
+        next.set(shard + 1);
+        shard
+    })
+}
+
+// Cap the length of each stream — janitor drains it every second, so this is just a safety net
 const MAX_LEN: u32 = 100_000;
 
 pub fn push(event: IViewEvent) {
@@ -41,22 +62,26 @@ pub fn push(event: IViewEvent) {
      * This operation is Big O(1).
      * Trimming without the tilde (~) is O(n) and can cause latency spikes when the stream is long.
      *
-     * Get the last entry in the stream:
-     * XREVRANGE weer:stream:views + - COUNT 1
+     * Get the last entry in the first stream:
+     * XREVRANGE weer:stream:views:0 + - COUNT 1
      *
      *
-     * XREAD STREAMS weer:stream:views 0
+     * XREAD STREAMS weer:stream:views:0 0
      *
-     * XINFO STREAM weer:stream:views
+     * XINFO STREAM weer:stream:views:0
      *
-     * XINFO GROUPS weer:stream:views
+     * XINFO GROUPS weer:stream:views:0
+     *
+     * It runs on the worker thread that handled the redirect, with that thread's connection,
+     * so the views of every worker don't have to go through one thread.
      */
-    cpeak::spawn(async move {
+    let key = views_stream_key(next_shard());
+    cpeak::spawn_local(async move {
         let added = redis::cmd("XADD")
             // ~ means approximate max length. It's more efficient than exact max length and good enough for our use case.
             // * means that Redis will generate the ID based on the current timestamp.
-            .arg((VIEWS_STREAM_KEY, "MAXLEN", "~", MAX_LEN, "*", fields))
-            .query_async::<String>(&mut REDIS.clone())
+            .arg((key, "MAXLEN", "~", MAX_LEN, "*", fields))
+            .query_async::<String>(&mut connection())
             .await;
 
         if let Err(err) = added {

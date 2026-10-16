@@ -6,13 +6,12 @@ use cpeak::{Value, json};
 use server_turbo::config::keys::KEYS;
 use server_turbo::database::index::POOL;
 use server_turbo::database::types::{IView, LinkType};
-use server_turbo::redis::redis::REDIS;
-use server_turbo::redis::views_stream::VIEWS_STREAM_KEY;
 
 use crate::helpers::factories::url::url_id;
 use crate::helpers::factories::user::create_user;
 use crate::helpers::supertest::{Agent, request};
 use crate::helpers::target::app;
+use crate::helpers::views::{last_views, streams_length};
 use crate::setup_each_test::test;
 
 const PUBLIC_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../server/public");
@@ -55,23 +54,10 @@ async fn qr_code_id(link: &Value) -> String {
         .unwrap()
 }
 
-// How many views are waiting in the stream of Redis
-async fn stream_length() -> u64 {
-    redis::cmd("XLEN")
-        .arg(VIEWS_STREAM_KEY)
-        .query_async(&mut REDIS.clone())
-        .await
-        .unwrap()
-}
-
 // The view that the last redirect has saved, from Redis or from the database
 async fn saved_view() -> Value {
     if KEYS.redis_enabled {
-        let entries: Vec<(String, Vec<String>)> = redis::cmd("XREVRANGE")
-            .arg((VIEWS_STREAM_KEY, "+", "-", "COUNT", 1))
-            .query_async(&mut REDIS.clone())
-            .await
-            .unwrap();
+        let entries = last_views(1).await;
         let fields = &entries[0].1;
         let entry = |name: &str| {
             fields
@@ -372,7 +358,7 @@ mod redirecting_to_the_real_url {
     fn should_not_save_a_view_if_the_link_was_not_found() {
         test(async {
             let before = if KEYS.redis_enabled {
-                stream_length().await
+                streams_length().await
             } else {
                 0
             };
@@ -380,7 +366,7 @@ mod redirecting_to_the_real_url {
             request(app()).get("/nope12").await;
 
             if KEYS.redis_enabled {
-                assert_eq!(stream_length().await, before);
+                assert_eq!(streams_length().await, before);
             } else {
                 let views = sqlx::query("SELECT id FROM views")
                     .fetch_all(&*POOL)

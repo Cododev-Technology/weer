@@ -11,7 +11,7 @@ use crate::config::keys::KEYS;
 use crate::database::index::POOL;
 use crate::database::types::{IToken, IUser};
 use crate::lib::log::log;
-use crate::redis::redis::REDIS;
+use crate::redis::redis::check_connection;
 use crate::router::api_router;
 
 // The web and styles packages build into the public folder of the Node.js server, so both servers serve that one
@@ -24,7 +24,7 @@ pub fn app() -> Cpeak {
     cpeak::spawn(async {
         LazyLock::force(&POOL);
         if KEYS.redis_enabled {
-            LazyLock::force(&REDIS);
+            check_connection().await;
         }
     });
 

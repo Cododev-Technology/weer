@@ -44,7 +44,7 @@ path = "__tests__/mod.rs"
 [dependencies]
 cpeak = { path = "../../../cpeak/rust" }
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "derive", "tls-rustls-ring", "chrono", "json", "ipnet"] }
-redis = { version = "1", default-features = false, features = ["tokio-comp", "tokio-rustls-comp", "streams", "connection-manager"] }
+redis = { version = "1", default-features = false, features = ["tokio-comp", "tokio-rustls-comp", "streams", "cluster-async"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "json", "gzip"] }
 qrcode = { version = "0.14", default-features = false, features = ["image", "svg"] }
 image = { version = "0.25", default-features = false, features = ["png"] }

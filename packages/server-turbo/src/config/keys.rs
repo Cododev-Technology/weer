@@ -32,6 +32,11 @@ pub struct Keys {
     // Redis
     pub redis_url: String,
     pub redis_enabled: bool,
+    // The nodes of the Redis cluster that server-turbo connects to (REDIS_URL is the single
+    // Redis of the Node.js server, since both servers read the same .env)
+    pub redis_cluster_nodes: Vec<String>,
+    // How many streams the views are spread over, so they land on more than one node
+    pub views_stream_shards: u32,
     // Show the warning page before redirecting to a domain that isn't on the allowlist
     pub redirect_warning: bool,
     // Limit how many links, emails and logins a visitor or a user can make (see lib/rate-limit.rs)
@@ -59,6 +64,18 @@ pub static KEYS: LazyLock<Keys> = LazyLock::new(|| Keys {
     // Redis
     redis_url: get_env("REDIS_URL"),
     redis_enabled: get_env("REDIS") == "true",
+    redis_cluster_nodes: get_optional_env("REDIS_CLUSTER_NODES")
+        .map(|nodes| {
+            nodes
+                .split(',')
+                .map(|node| node.trim().to_string())
+                .collect()
+        })
+        .unwrap_or_default(),
+    views_stream_shards: get_optional_env("VIEWS_STREAM_SHARDS")
+        .and_then(|shards| shards.parse().ok())
+        .filter(|shards| *shards > 0)
+        .unwrap_or(16),
     redirect_warning: get_optional_env("REDIRECT_WARNING").as_deref() != Some("false"),
     rate_limit: get_optional_env("RATE_LIMIT").as_deref() != Some("false"),
 });

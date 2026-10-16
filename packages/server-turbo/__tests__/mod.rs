@@ -13,6 +13,7 @@ mod helpers {
     pub mod logs;
     pub mod supertest;
     pub mod target;
+    pub mod views;
 }
 
 #[path = "setup.createDb.rs"]
