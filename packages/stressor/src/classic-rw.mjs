@@ -3,12 +3,18 @@
  * 
  * Example usage:
  *  node src/classic-rw.mjs --url http://localhost:2080 --connections 5 --sessions 500 --duration 10 --rate 50 write-ratio 20 --output codes.txt
+ *  node src/classic-rw.mjs --url http://localhost:2080 --connections 400 --workers 4 --duration 10 write-ratio 0
  * 
  */
 
 import autocannon from 'autocannon';
-import { writeFileSync, readSync, openSync, closeSync, existsSync } from 'fs';
+import { existsSync, readFileSync, renameSync, rmSync } from 'fs';
 import { randomBytes } from 'crypto';
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+
+const require = createRequire(import.meta.url);
+const codes = require('./codes.cjs');
 
 const DOMAINS = [
   'github.com', 'stackoverflow.com', 'en.wikipedia.org',
@@ -64,6 +70,7 @@ function parseArgs() {
     writeRatio: 20,
     rate: null,
     output: 'codes.txt',
+    workers: null,
   };
 
   for (let i = 0; i < args.length; i += 2) {
@@ -78,6 +85,7 @@ function parseArgs() {
     else if (key === 'write-ratio') opts.writeRatio = parseInt(val, 10);
     else if (key === 'rate') opts.rate = parseInt(val, 10);
     else if (key === 'output') opts.output = val;
+    else if (key === 'workers') opts.workers = parseInt(val, 10);
   }
 
   return opts;
@@ -101,7 +109,7 @@ async function main() {
   const opts = parseArgs();
 
   if (!opts.url) {
-    console.error('Usage: node scripts/stress.mjs --url <base-url> [--connections 10] [--duration 30] [--pipelining 1] [--pool 500] [--sessions 100] [--write-ratio 20] [--output codes.txt]');
+    console.error('Usage: node scripts/stress.mjs --url <base-url> [--connections 10] [--duration 30] [--pipelining 1] [--pool 500] [--sessions 100] [--write-ratio 20] [--output codes.txt] [--workers 4]');
     process.exit(1);
   }
 
@@ -122,20 +130,16 @@ async function main() {
     console.log(`${opts.sessions} sessions established.\n`);
   }
 
-  // Warmup. Pre-seed the code pool so reads can start immediately
-  const codePool = [];
-  const collectedCodes = [];
+  // With --workers, autocannon loads these files in every worker thread itself (it can't pass a function to them)
+  const load = (file) => opts.workers ? fileURLToPath(new URL(file, import.meta.url)) : require(file);
+  const setupRequest = load('./read-request.cjs');
+  const onResponse = load('./write-response.cjs');
 
-  // Seed the code pool from the output file (populated by a prior write run)
+  // Warmup. Pre-seed the code pool so reads can start immediately
+  rmSync(codes.newFile(opts.output), { force: true });
+
   if (existsSync(opts.output)) {
-    const fd = openSync(opts.output, 'r');
-    const buffer = Buffer.alloc(1_000_000);
-    const bytesRead = readSync(fd, buffer, 0, buffer.length, 0);
-    closeSync(fd);
-    const lines = buffer.toString('utf8', 0, bytesRead).split('\n').filter(Boolean);
-    if (bytesRead === buffer.length) lines.pop(); // last line may be cut off mid-code
-    for (const line of lines) codePool.push(line);
-    console.log(`Loaded ${codePool.length} codes from ${opts.output}.\n`);
+    console.log(`Loaded ${codes.load(opts.output).length} codes from ${opts.output}.\n`);
   } else if (opts.writeRatio < 100) {
     console.warn(`Warning: ${opts.output} not found — read requests will have no codes until writes produce some.\n`);
   }
@@ -153,24 +157,14 @@ async function main() {
       cookie: sessionCookies[i % sessionCookies.length],
     },
     body: JSON.stringify({ url: generateUrl(), type: 'classic' }),
-    onResponse: (status, body) => {
-      if (status === 200) {
-        try {
-          const { code } = JSON.parse(body);
-          if (code) { codePool.push(code); collectedCodes.push(code); }
-        } catch { }
-      }
-    },
+    onResponse,
   }));
 
   const readRequests = Array.from({ length: readCount }, () => ({
     method: 'GET',
     path: '/',
     headers: {},
-    setupRequest: (req) => {
-      req.path = `/${codePool[Math.floor(Math.random() * codePool.length)]}`;
-      return req;
-    },
+    setupRequest,
   }));
 
   // Build the final requests array, handling pure-read and pure-write edge cases
@@ -190,7 +184,7 @@ async function main() {
   }
 
   // Running autocannon
-  console.log(`Running: ${opts.connections} connections · ${opts.duration}s · ${opts.writeRatio}% writes / ${readRatio}% reads · ${opts.sessions} sessions\n`);
+  console.log(`Running: ${opts.connections} connections · ${opts.duration}s · ${opts.writeRatio}% writes / ${readRatio}% reads · ${opts.sessions} sessions${opts.workers ? ` · ${opts.workers} workers` : ''}\n`);
 
   const instance = autocannon(
     {
@@ -198,15 +192,20 @@ async function main() {
       connections: opts.connections,
       duration: opts.duration,
       pipelining: opts.pipelining,
-      ...(opts.rate && { overallRate: opts.rate }),
+      // overallRate is per worker, so the rate is split among them
+      ...(opts.rate && { overallRate: opts.workers ? Math.max(Math.round(opts.rate / opts.workers), 1) : opts.rate }),
+      ...(opts.workers && { workers: opts.workers }),
+      initialContext: { output: opts.output },
       requests,
     },
     (err, result) => {
       if (err) { console.error('Autocannon error:', err); process.exit(1); }
       console.log('\nStatus codes:', result.statusCodeStats);
-      if (collectedCodes.length > 0) {
-        writeFileSync(opts.output, collectedCodes.join('\n'), 'utf8');
-        console.log(`${collectedCodes.length} codes written to ${opts.output}`);
+      const newFile = codes.newFile(opts.output);
+      if (existsSync(newFile)) {
+        const count = readFileSync(newFile, 'utf8').split('\n').filter(Boolean).length;
+        renameSync(newFile, opts.output);
+        console.log(`${count} codes written to ${opts.output}`);
       }
     },
   );

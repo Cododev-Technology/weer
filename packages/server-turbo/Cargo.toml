@@ -37,7 +37,7 @@ name = "tests"
 path = "__tests__/mod.rs"
 
 [dependencies]
-cpeak = { path = "../../../cpeak/rust" }
+cpeak = "0.4.0"
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "derive", "tls-rustls-ring", "chrono", "json", "ipnet"] }
 redis = { version = "1", default-features = false, features = ["tokio-comp", "tokio-rustls-comp", "streams", "cluster-async"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "json", "gzip"] }

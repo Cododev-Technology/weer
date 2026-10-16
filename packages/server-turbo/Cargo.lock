@@ -666,7 +666,9 @@ checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
 name = "cpeak"
-version = "0.3.0"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d706ec4a4f98307e588c1d7f3c53a97df2fcb9ed5e5aae4b223a9d9e465ab56c"
 dependencies = [
  "brotli",
  "bytes",
