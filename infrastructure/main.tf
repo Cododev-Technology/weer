@@ -48,6 +48,10 @@ resource "aws_instance" "db" {
   instance_market_options {
     market_type = "spot"
   }
+
+  root_block_device {
+    volume_size = 10 # GB
+  }
 }
 
 resource "aws_instance" "server" {
@@ -65,7 +69,7 @@ resource "aws_instance" "server" {
   }
 
   root_block_device {
-    volume_size = 20 # GB
+    volume_size = 15 # GB
   }
 }
 
@@ -84,7 +88,7 @@ resource "aws_instance" "tester" {
   }
 
   root_block_device {
-    volume_size = 15 # GB
+    volume_size = 8 # GB
   }
 }
 
