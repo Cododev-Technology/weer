@@ -3,6 +3,13 @@ dev.ts
 .mcp.json
 
 packages/stressor/codes.txt
+packages/stressor/codes.txt.new
+
+# Terraform
+infrastructure/.terraform
+infrastructure/*.tfstate
+infrastructure/*.tfstate.*
+infrastructure/.terraform.tfstate.lock.info
 
 temp
 node_modules
