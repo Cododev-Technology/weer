@@ -512,7 +512,8 @@ const redirect = async (req: Request, res: Response) => {
     pushView(viewData);
   } else {
     // We have this in case we want to run the server without Redis, but it should not be the default in production because it can cause performance issues.
-    await DB.insert<IView>("views", viewData);
+    // (the hash is stored as its 32 bytes, see views.sql)
+    await DB.insert<IView>("views", { ...viewData, visitor_hash: Buffer.from(visitorHash, "hex") });
   }
 
   // REDIRECT_WARNING=false skips the warning page for every link (for the load tests)
@@ -549,6 +550,9 @@ const redirectWarningData = async (req: Request, res: Response) => {
 // Delete a url record
 const remove = async (req: Request, res: Response) => {
   await DB.delete<IUrl>("urls", `id=$1`, [req.params?.id]);
+  // views has no foreign key to urls (see views.sql), so its views go here
+  // (not DB.delete: it returns every deleted row, and a link can have millions of views)
+  await DB.query(`DELETE FROM views WHERE url_id=$1`, [req.params?.id]);
   res.json({ message: "deleted" });
 };
 

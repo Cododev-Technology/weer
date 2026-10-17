@@ -57,9 +57,10 @@ mod getting_the_stats_of_a_url {
             let (agent, id) = create_link().await;
             let (_, other_id) = create_link().await;
 
-            let visitor1 = "1".repeat(64);
-            let visitor2 = "2".repeat(64);
-            let visitor3 = "3".repeat(64);
+            // (a hash is 32 bytes)
+            let visitor1 = vec![1_u8; 32];
+            let visitor2 = vec![2_u8; 32];
+            let visitor3 = vec![3_u8; 32];
 
             // url_id, visitor_hash, via_qr, link_type
             let views = [

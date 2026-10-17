@@ -79,7 +79,7 @@ pub static KEYS: LazyLock<Keys> = LazyLock::new(|| Keys {
     views_stream_shards: get_optional_env("VIEWS_STREAM_SHARDS")
         .and_then(|shards| shards.parse().ok())
         .filter(|shards| *shards > 0)
-        .unwrap_or(16),
+        .unwrap_or(48),
     link_cache: get_optional_env("LINK_CACHE").as_deref() != Some("false"),
     redirect_warning: get_optional_env("REDIRECT_WARNING").as_deref() != Some("false"),
     rate_limit: get_optional_env("RATE_LIMIT").as_deref() != Some("false"),

@@ -163,7 +163,7 @@ pub struct IDigitCode {
 #[derive(Debug, Clone, Default, FromRow)]
 #[sqlx(default)]
 pub struct IView {
-    pub id: i32,
+    pub id: i64,
     pub url_id: i32,
     pub user_agent: Option<String>,
     pub referrer: Option<String>,
@@ -172,7 +172,7 @@ pub struct IView {
     pub ip_address: Option<IpAddr>,
     pub country: Option<String>,
     pub city: Option<String>,
-    pub visitor_hash: Option<String>,
+    pub visitor_hash: Option<Vec<u8>>,
     pub created_at: Option<DateTime<Utc>>,
 }
 

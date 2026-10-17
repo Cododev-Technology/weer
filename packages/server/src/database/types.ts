@@ -111,7 +111,7 @@ export interface IView {
   ip_address?: string;
   country?: string;
   city?: string;
-  visitor_hash: string;
+  visitor_hash: Buffer;
   created_at: Date;
 }
 

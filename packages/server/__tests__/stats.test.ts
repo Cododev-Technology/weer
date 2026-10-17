@@ -40,8 +40,9 @@ describe("Getting the stats of a URL", () => {
     const { agent, id } = await createLink();
     const other = await createLink();
 
-    const visitor1 = "1".repeat(64);
-    const visitor2 = "2".repeat(64);
+    // (a hash is 32 bytes)
+    const visitor1 = Buffer.alloc(32, 1);
+    const visitor2 = Buffer.alloc(32, 2);
 
     await DB.insert<IView>("views", { url_id: id, visitor_hash: visitor1, via_qr: false, link_type: "classic" });
     await DB.insert<IView>("views", { url_id: id, visitor_hash: visitor1, via_qr: true });
@@ -50,7 +51,7 @@ describe("Getting the stats of a URL", () => {
     await DB.insert<IView>("views", { url_id: id, visitor_hash: visitor2, via_qr: false, link_type: "digit" });
 
     // The views of another link don't count
-    await DB.insert<IView>("views", { url_id: other.id, visitor_hash: "3".repeat(64), via_qr: true });
+    await DB.insert<IView>("views", { url_id: other.id, visitor_hash: Buffer.alloc(32, 3), via_qr: true });
 
     await DB.query(
       "UPDATE views SET created_at = '2030-03-04T05:06:07.891234Z'::timestamptz - (id * INTERVAL '24 hours') WHERE url_id = $1",

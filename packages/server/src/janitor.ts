@@ -86,7 +86,7 @@ const drainViewsOnce = async (): Promise<void> => {
     if (!entries || !entries.length) return;
 
     const ids: string[] = [];
-    const values: (string | number | boolean | null)[] = [];
+    const values: (string | number | boolean | Buffer | null)[] = [];
 
     for (const [id, fields] of entries) {
       ids.push(id);
@@ -98,7 +98,8 @@ const drainViewsOnce = async (): Promise<void> => {
         entry.referrer ?? "",
         entry.link_type || null,
         entry.via_qr === "1",
-        entry.visitor_hash
+        // The stream has the hash in hex; the database stores its 32 bytes
+        Buffer.from(entry.visitor_hash, "hex")
       );
     }
 

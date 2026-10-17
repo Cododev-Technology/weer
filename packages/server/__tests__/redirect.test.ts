@@ -58,7 +58,8 @@ const savedView = async () => {
   const [view] = await DB.query(
     "SELECT url_id, user_agent, referrer, link_type, via_qr, visitor_hash FROM views ORDER BY id DESC LIMIT 1"
   );
-  return view;
+  // The database has the hash's bytes; the stream (and these tests) have it in hex
+  return { ...view, visitor_hash: view.visitor_hash.toString("hex") };
 };
 
 describe("Redirecting to the real URL", () => {

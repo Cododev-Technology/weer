@@ -7,10 +7,12 @@
 # Each machine sets itself up when it boots (basic-setup.sh, then its own script), which takes a
 # few minutes. ssh in and run "cloud-init status --wait" to know when it's done.
 
+# Sized for 1M req/s for 2 minutes (120M requests), from our load test measurements.
+# The comments say what changes for 30 minutes (1.8 billion requests).
 locals {
-  server_type = "c8gn.2xlarge"
-  tester_type = "c8gn.2xlarge"
-  db_type     = "c8gn.2xlarge"
+  server_type = "c8gn.12xlarge" # about 30 busy cores at 1M (server-turbo, 12 Redis masters, network). 30 minutes: the same
+  tester_type = "c8gn.12xlarge" # about 31 busy cores at 1M (32,000 req/s per core). 30 minutes: the same
+  db_type     = "c8gn.4xlarge"  # 1.1M views/s on 16 cores with COPY. 30 minutes: the same
 
   #   type            vCPUs  memory   network       Spot $/hour  queues
   #   c8gn.medium         1    2 GB   up to 25 Gbit       0.006       1
@@ -50,7 +52,10 @@ resource "aws_instance" "db" {
   }
 
   root_block_device {
-    volume_size = 8 # GB
+    volume_size = 50 # GB: 16 GB of views (133 bytes each) + 16 GB of WAL + Ubuntu. 30 minutes: 300 (240 GB of views)
+    volume_type = "gp3"
+    iops        = 8000 # it did up to 4,700 writes/s; at least 4 per MB/s of throughput. 30 minutes: the same
+    throughput  = 1000 # MB/s: 320-540 MB/s at 1M (820 with real browser rows). 30 minutes: the same
   }
 }
 
@@ -69,7 +74,9 @@ resource "aws_instance" "server" {
   }
 
   root_block_device {
-    volume_size = 15 # GB
+    volume_size = 25 # GB: 11 GB of request logs (95 bytes each) + 7 GB of the rest. 30 minutes: 200 (171 GB of logs)
+    volume_type = "gp3"
+    throughput  = 250 # MB/s: the logs write 95 MB/s at 1M (the default is 125). 30 minutes: the same
   }
 }
 
@@ -88,7 +95,7 @@ resource "aws_instance" "tester" {
   }
 
   root_block_device {
-    volume_size = 8 # GB
+    volume_size = 8 # GB: the tester writes almost nothing. 30 minutes: the same
   }
 }
 

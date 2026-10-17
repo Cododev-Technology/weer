@@ -91,7 +91,8 @@ async fn saved_view() -> Value {
         "referrer": view.referrer,
         "link_type": view.link_type.map(LinkType::as_str),
         "via_qr": view.via_qr,
-        "visitor_hash": view.visitor_hash,
+        // The database has the hash's bytes; the stream (and these tests) have it in hex
+        "visitor_hash": view.visitor_hash.map(hex_encode),
     })
 }
 

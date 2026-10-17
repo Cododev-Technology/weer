@@ -8,7 +8,10 @@ CMD=$1
 SYSTEM=$2 # set to -prod for redis6-server else it will be redis-server
 
 
-CLUSTER_COUNT=6 # change this to set number of redis instances in cluster
+# change this to set number of redis instances in cluster.
+# 12 masters and no replicas: a Redis node uses one core, and at 1M req/s the masters need about
+# 7 cores together, so 3 masters would cap the server at about 440,000 req/s
+CLUSTER_COUNT=12
 
 END_PORT=$((7100 + CLUSTER_COUNT - 1)) # 7100, not 7000: on macOS, AirPlay Receiver listens on 7000
 
@@ -48,7 +51,7 @@ EOF
 
   $REDIS_CLI --cluster create \
   $(for port in $(seq 7100 $END_PORT); do echo -n "127.0.0.1:$port "; done) \
-  --cluster-replicas 1 --cluster-yes
+  --cluster-replicas 0 --cluster-yes
 
 elif [ "$CMD" == "-stop" ]; then
   for port in $(seq 7100 $END_PORT); do

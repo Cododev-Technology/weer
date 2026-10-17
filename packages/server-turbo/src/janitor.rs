@@ -4,14 +4,14 @@
  */
 
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{Debug, Write};
 use std::net::IpAddr;
 use std::sync::LazyLock;
 use std::time::Duration;
 
 use cpeak::CpeakError;
 use redis::cluster_async::ClusterConnection;
-use sqlx::AssertSqlSafe;
+use sqlx::postgres::PgPoolCopyExt;
 
 use server_turbo::config::keys::KEYS;
 use server_turbo::database::index::POOL;
@@ -89,7 +89,16 @@ async fn clean_up_expired_digit_code() {
 
 const GROUP_NAME: &str = "views_consumer";
 const CONSUMER_NAME: &str = "janitor";
-const BATCH_SIZE: u32 = 500;
+// With COPY, 5,000 views at a time reach about 1M views/s (500 at a time only 790,000)
+const BATCH_SIZE: u32 = 5000;
+
+// COPY instead of INSERT: about 1M views/s instead of 760,000 (see views.sql)
+const COPY_VIEWS: &str = "COPY views (url_id, ip_address, user_agent, referrer, link_type, via_qr, visitor_hash) FROM STDIN (FORMAT csv)";
+
+// A text field in CSV: in quotes, with its quotes doubled (so an empty one is "", not NULL)
+fn csv_text(value: &str) -> String {
+    format!("\"{}\"", value.replace('"', "\"\""))
+}
 
 // Parse the flat field-value array from a Redis stream entry into an object
 fn parse_stream_fields(fields: &[String]) -> HashMap<&str, &str> {
@@ -121,8 +130,13 @@ async fn create_views_group(redis: &mut ClusterConnection, key: &str) {
     }
 }
 
-async fn drain_views_once(redis: &mut ClusterConnection, key: &str, consecutive_errors: &mut u32) {
-    let drained: Result<(), CpeakError> = async {
+// Returns how many views it saved
+async fn drain_views_once(
+    redis: &mut ClusterConnection,
+    key: &str,
+    consecutive_errors: &mut u32,
+) -> usize {
+    let drained: Result<usize, CpeakError> = async {
         let results: Streams = redis::cmd("XREADGROUP")
             .arg((
                 "GROUP",
@@ -140,73 +154,52 @@ async fn drain_views_once(redis: &mut ClusterConnection, key: &str, consecutive_
             .await?;
 
         let Some(results) = results.filter(|results| !results.is_empty()) else {
-            return Ok(());
+            return Ok(0);
         };
         let entries = &results[0].1;
         if entries.is_empty() {
-            return Ok(());
+            return Ok(0);
         }
 
         let ids: Vec<&str> = entries.iter().map(|(id, _)| id.as_str()).collect();
 
-        #[allow(unused_variables)]
         let row_count = ids.len();
 
-        const COLUMNS: [&str; 7] = [
-            "url_id",
-            "ip_address",
-            "user_agent",
-            "referrer",
-            "link_type",
-            "via_qr",
-            "visitor_hash",
-        ];
-
-        // placeholders should look like ($1, $2, $3, $4, $5, $6), ($7, $8, $9, $10, $11, $12), ...
-        let placeholders = (0..ids.len())
-            .map(|i| {
-                let offset = i * COLUMNS.len();
-                let row: Vec<String> = (0..COLUMNS.len())
-                    .map(|j| format!("${}", offset + j + 1))
-                    .collect();
-                format!("({})", row.join(", "))
-            })
-            .collect::<Vec<String>>()
-            .join(", ");
-
-        // (a query that we put together ourselves has to be marked as safe for sqlx to run it)
-        let mut insert = sqlx::query(AssertSqlSafe(format!(
-            "INSERT INTO views ({}) VALUES {placeholders}",
-            COLUMNS.join(", ")
-        )))
-        // The query is another one for every number of views, so there's no use in sqlx keeping it
-        .persistent(false);
-
+        // One line of CSV for every view, in the order of COPY_VIEWS. An empty field is NULL.
+        let mut csv = String::with_capacity(entries.len() * 200);
         for (_, fields) in entries {
             let entry = parse_stream_fields(fields);
-            insert = insert
-                .bind(
-                    entry
-                        .get("url_id")
-                        .and_then(|url_id| url_id.parse::<i32>().ok()),
-                )
-                .bind(
-                    entry
-                        .get("ip_address")
-                        .and_then(|ip_address| ip_address.parse::<IpAddr>().ok()),
-                )
-                .bind(entry.get("user_agent").copied().unwrap_or(""))
-                .bind(entry.get("referrer").copied().unwrap_or(""))
-                .bind(
-                    entry
-                        .get("link_type")
-                        .and_then(|link_type| LinkType::parse(link_type)),
-                )
-                .bind(entry.get("via_qr").copied() == Some("1"))
-                .bind(entry.get("visitor_hash").copied());
+            let url_id = entry
+                .get("url_id")
+                .and_then(|url_id| url_id.parse::<i32>().ok());
+            let ip_address = entry
+                .get("ip_address")
+                .and_then(|ip_address| ip_address.parse::<IpAddr>().ok());
+            let link_type = entry
+                .get("link_type")
+                .and_then(|link_type| LinkType::parse(link_type));
+
+            // (writing to a String can't fail)
+            let _ = writeln!(
+                csv,
+                "{},{},{},{},{},{},{}",
+                url_id.map(|url_id| url_id.to_string()).unwrap_or_default(),
+                ip_address.map(|ip| ip.to_string()).unwrap_or_default(),
+                csv_text(entry.get("user_agent").copied().unwrap_or("")),
+                csv_text(entry.get("referrer").copied().unwrap_or("")),
+                link_type.map_or("", LinkType::as_str),
+                entry.get("via_qr").copied() == Some("1"),
+                // The stream has the hash in hex; \x tells PostgreSQL to store it as bytes
+                entry
+                    .get("visitor_hash")
+                    .map(|visitor_hash| format!("\\x{visitor_hash}"))
+                    .unwrap_or_default(),
+            );
         }
 
-        insert.execute(&*POOL).await?;
+        let mut copy = POOL.copy_in_raw(COPY_VIEWS).await?;
+        copy.send(csv.as_bytes()).await?;
+        copy.finish().await?;
 
         // This tells Redis that the janitor has successfully processed the messages
         redis::cmd("XACK")
@@ -216,17 +209,21 @@ async fn drain_views_once(redis: &mut ClusterConnection, key: &str, consecutive_
 
         *consecutive_errors = 0;
         // println!("[views-consumer] inserted {row_count} views");
-        Ok(())
+        Ok(row_count)
     }
     .await;
 
-    if let Err(err) = drained {
-        *consecutive_errors += 1;
-        let delay = 1000_u64
-            .saturating_mul(2_u64.saturating_pow(*consecutive_errors))
-            .min(30_000);
-        eprintln!("[views-consumer] drain of {key} failed (retry in {delay}ms): {err}");
-        cpeak::sleep(Duration::from_millis(delay)).await;
+    match drained {
+        Ok(saved) => saved,
+        Err(err) => {
+            *consecutive_errors += 1;
+            let delay = 1000_u64
+                .saturating_mul(2_u64.saturating_pow(*consecutive_errors))
+                .min(30_000);
+            eprintln!("[views-consumer] drain of {key} failed (retry in {delay}ms): {err}");
+            cpeak::sleep(Duration::from_millis(delay)).await;
+            0
+        }
     }
 }
 
@@ -291,10 +288,13 @@ async fn run_drain_loop(shard: u32) {
 
     let mut consecutive_errors = 0;
     loop {
-        drain_views_once(&mut redis, &key, &mut consecutive_errors).await;
+        let saved = drain_views_once(&mut redis, &key, &mut consecutive_errors).await;
 
         // We can sleep here to reduce the CPU load of this process when receiving lots of views.
-        cpeak::sleep(Duration::from_millis(100)).await;
+        // But only when the batch wasn't full: a full one means more views are waiting.
+        if saved < BATCH_SIZE as usize {
+            cpeak::sleep(Duration::from_millis(100)).await;
+        }
     }
 }
 
