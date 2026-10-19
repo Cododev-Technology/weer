@@ -2,7 +2,6 @@
 //
 // A change here must also be made in:
 // - Paddle (sandbox and live): the price amounts and names, and a new price for a new pack
-// - packages/server-shared/public/terms.html: the refund example uses the 5,000 pack
 // - packages/server/__tests__/payments.test.ts and packages/server-turbo/__tests__/payments.test.rs:
 //   their credit counts and refund amounts assume these packs
 // A new field also goes in packages/common/src/credit-packs.ts, and in server-turbo's build.rs and
