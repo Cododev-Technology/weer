@@ -24,7 +24,7 @@ fn too_many_requests() -> String {
 fn out_of_credits() -> String {
     json!({
         "error":
-            "You've used all your credits. Please contact support to increase your limit for free.",
+            "You've used all your credits. You can buy more from the Credits menu.",
     })
     .to_string()
 }
@@ -247,7 +247,7 @@ mod rate_limiting {
                     .fetch_one(&*POOL)
                     .await
                     .unwrap();
-            assert_eq!(link_credits, 88);
+            assert_eq!(link_credits, 13);
 
             assert!(rate_limits().await.is_empty());
         });
@@ -290,6 +290,15 @@ mod rate_limiting {
                 .await
                 .unwrap();
             assert_eq!(urls, [URL]);
+
+            // The refused attempts don't take the credits below 0
+            let link_credits =
+                sqlx::query_scalar::<_, i32>("SELECT link_credits FROM users WHERE id = $1")
+                    .bind(user.id)
+                    .fetch_one(&*POOL)
+                    .await
+                    .unwrap();
+            assert_eq!(link_credits, 0);
         });
     }
 

@@ -1,0 +1,42 @@
+// The packs of credits that can be bought. Prices are in USD, before tax. production stays empty
+// until the live account has its prices.
+//
+// A change here must also be made in:
+// - Paddle (sandbox and live): the price amounts and names, and a new price for a new pack
+// - packages/server-shared/public/terms.html: the refund example uses the 5,000 pack
+// - packages/server/__tests__/payments.test.ts and packages/server-turbo/__tests__/payments.test.rs:
+//   their credit counts and refund amounts assume these packs
+// A new field also goes in packages/common/src/credit-packs.ts, and in server-turbo's build.rs and
+// src/lib/paddle.rs (CreditPack).
+[
+  {
+    credits: 200,
+    price: "4.99",
+    linksPerDollar: 40,
+    featured: false,
+    paddle: {
+      sandbox: "pri_01m57zf6y8pmftvxy6vydfg491",
+      production: "",
+    },
+  },
+  {
+    credits: 5000,
+    price: "14.99",
+    linksPerDollar: 300,
+    featured: true, // "Most popular"
+    paddle: {
+      sandbox: "pri_01m57zf6zz2na8fcqw6pqr8s86",
+      production: "",
+    },
+  },
+  {
+    credits: 25000,
+    price: "49.99",
+    linksPerDollar: 500,
+    featured: false,
+    paddle: {
+      sandbox: "pri_01m57zf71jrb4gzbq3t01fdz61",
+      production: "",
+    },
+  },
+]

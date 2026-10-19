@@ -11,6 +11,7 @@ mod helpers {
     }
     pub mod assert;
     pub mod logs;
+    pub mod paddle;
     pub mod supertest;
     pub mod target;
     pub mod views;
@@ -33,6 +34,8 @@ mod logs_test;
 mod middleware_test;
 #[path = "pages.test.rs"]
 mod pages_test;
+#[path = "payments.test.rs"]
+mod payments_test;
 #[path = "qr.test.rs"]
 mod qr_test;
 #[path = "rate-limit.test.rs"]

@@ -2,9 +2,11 @@ import React, {
   createContext,
   useContext,
   useCallback,
+  useEffect,
   useState,
   ReactNode,
 } from "react";
+import axios from "axios";
 import { GlobalModalRenderer } from "./components/modals/GlobalModalRenderer";
 
 type ModalType = "login" | "confirmDelete" | "qrCode" | "customizeLink" | "editRealUrl" | "linkStats" | "username" | "account" | "credits" | "signUp" | "verifyEmail" | "forgotPassword" | "resetPassword" | null;
@@ -35,6 +37,15 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
   const closeModal = useCallback(() => {
     setModal({ type: null });
   }, []);
+
+  // Out of credits (402): show the credit packs
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(undefined, (error) => {
+      if (error.response?.status === 402) openModal("credits");
+      return Promise.reject(error);
+    });
+    return () => axios.interceptors.response.eject(interceptor);
+  }, [openModal]);
 
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = React.useMemo(

@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@paddle/paddle-js": "^1.6.5",
     "@weer/common": "1.0.0",
     "@weer/reusable": "1.0.0",
     "axios": "^1.12.2",

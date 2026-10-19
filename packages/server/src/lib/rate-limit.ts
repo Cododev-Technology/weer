@@ -12,15 +12,15 @@ const LOGIN_BURST_LIMIT = 5; // per 10 minutes, per email attempted
 
 async function enforceUserLimit(userId: number): Promise<void> {
   const row = await DB.find<{ link_credits: number }>(
-    `UPDATE users SET link_credits = link_credits - 1 WHERE id = $1 RETURNING link_credits`,
+    `UPDATE users SET link_credits = link_credits - 1 WHERE id = $1 AND link_credits > 0 RETURNING link_credits`,
     [userId]
   );
 
-  if ((row?.link_credits ?? 0) < 0) {
+  if (!row) {
     throw {
       status: 402,
       message:
-        "You've used all your credits. Please contact support to increase your limit for free.",
+        "You've used all your credits. You can buy more from the Credits menu.",
     };
   }
 }

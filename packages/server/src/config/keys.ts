@@ -45,4 +45,12 @@ export default {
   rateLimit: getOptionalEnv("RATE_LIMIT") !== "false",
   // Write a line to the info log for every request
   requestLog: getOptionalEnv("REQUEST_LOG") !== "false",
+  // Paddle (buying credits)
+  paddleEnvironment: (getOptionalEnv("PADDLE_ENVIRONMENT") === "production"
+    ? "production"
+    : "sandbox") as "sandbox" | "production",
+  paddleApiKey: getOptionalEnv("PADDLE_API_KEY"),
+  paddleClientToken: getOptionalEnv("PADDLE_CLIENT_TOKEN"),
+  // Overrides the address of Paddle's API (for the tests)
+  paddleApiUrl: getOptionalEnv("PADDLE_API_URL"),
 };

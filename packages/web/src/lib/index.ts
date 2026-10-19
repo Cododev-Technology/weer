@@ -63,6 +63,24 @@ function cutString(string: string, maxLength: number): string {
   return string;
 }
 
+// Google's sign-in always comes back to the home page, so the page it was started from (like
+// /checkout) is kept here to go back to
+function rememberPageForLogin(): void {
+  if (window.location.pathname !== "/") {
+    sessionStorage.setItem("afterLogin", window.location.pathname + window.location.search);
+  }
+}
+
+// Goes back to the page the sign-in was started from. False if there is none.
+function returnAfterLogin(): boolean {
+  const page = sessionStorage.getItem("afterLogin");
+  sessionStorage.removeItem("afterLogin");
+
+  if (!page || window.location.pathname !== "/") return false;
+  window.location.replace(page);
+  return true;
+}
+
 // Remove the http(s):// part from a url
 function simplifyUrl(url: string): string {
   return url.replace(/^(?:https?:\/\/)?(?:www\.)?/, "");
@@ -107,6 +125,8 @@ interface Lib {
   handleErr: (error: any) => void;
   formatDuration: (milliseconds: number | Date) => string;
   ensureProtocol: (url: string) => string;
+  rememberPageForLogin: () => void;
+  returnAfterLogin: () => boolean;
 }
 
 const lib: Lib = {
@@ -116,6 +136,8 @@ const lib: Lib = {
   simplifyUrl,
   formatDuration,
   ensureProtocol,
+  rememberPageForLogin,
+  returnAfterLogin,
 };
 
 export default lib;

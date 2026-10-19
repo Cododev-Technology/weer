@@ -269,7 +269,7 @@ describe("Updating the destination of a URL", () => {
       "SELECT link_credits FROM users WHERE id = $1",
       [user.id]
     );
-    assert.strictEqual(link_credits, 98);
+    assert.strictEqual(link_credits, 23);
   });
 
   it("should not update the destination to a URL that is not valid", async () => {

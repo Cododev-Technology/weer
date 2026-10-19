@@ -1722,6 +1722,11 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@paddle/paddle-js@^1.6.5":
+  version "1.6.5"
+  resolved "https://registry.yarnpkg.com/@paddle/paddle-js/-/paddle-js-1.6.5.tgz#162f0c827dc0bb7f9f2952aedb7ef8610b7eb2d3"
+  integrity sha512-uFRvptUzYRqRlqTU5XmfcZWC9BGVYpZNdANd3giJjZbJlHesnE4gn8PyjtYpesU1ar2ZGPuJxHvrrSIV9jjdVw==
+
 "@parcel/watcher-android-arm64@2.5.1":
   version "2.5.1"
   resolved "https://registry.yarnpkg.com/@parcel/watcher-android-arm64/-/watcher-android-arm64-2.5.1.tgz#507f836d7e2042f798c7d07ad19c3546f9848ac1"

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "seed": "./env.sh tsx ./src/database/seed.ts",
-    "test": "./env.sh DB_DATABASE=weer_test NODE_ENV=test SKIP_EMAIL=true mocha",
+    "test": "./env.sh DB_DATABASE=weer_test NODE_ENV=test SKIP_EMAIL=true PADDLE_API_URL=http://127.0.0.1:2090 mocha",
     "dev": "./env.sh tsx watch ./src/index.ts",
     "dev-inspect": "./env.sh tsx --inspect ./src/index.ts",
     "janitor": "./env.sh tsx ./src/janitor/index.ts",

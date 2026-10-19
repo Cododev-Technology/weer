@@ -23,6 +23,7 @@
 @use "components/redirect-warning";
 @use "components/404" as page-not-found;
 @use "components/legal";
+@use "components/payments";
 
 @use "layout/navigation";
 @use "layout/footer";

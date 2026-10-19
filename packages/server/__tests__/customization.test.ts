@@ -288,7 +288,7 @@ describe("Changing the type of a URL", () => {
       "SELECT link_credits FROM users WHERE id = $1",
       [user.id]
     );
-    assert.strictEqual(link_credits, 98);
+    assert.strictEqual(link_credits, 23);
   });
 
   it("should leave the link alone if the user is out of credits", async () => {
@@ -302,7 +302,7 @@ describe("Changing the type of a URL", () => {
       res.text,
       JSON.stringify({
         error:
-          "You've used all your credits. Please contact support to increase your limit for free.",
+          "You've used all your credits. You can buy more from the Credits menu.",
       })
     );
 

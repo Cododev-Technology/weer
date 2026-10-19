@@ -1,6 +1,6 @@
 use cpeak::Cpeak;
 
-use crate::controllers::{auth, url, user};
+use crate::controllers::{auth, payments, url, user};
 use crate::lib::google_oauth::build_auth_url;
 use crate::middlewares;
 
@@ -87,6 +87,32 @@ pub fn api_router(app: &mut Cpeak) {
         middlewares::require_auth,
         user::change_password,
     );
+
+    // ------------------------------------------------ //
+    // ************ PAYMENT ROUTES ************* //
+    // ------------------------------------------------ //
+
+    // Whether credits can be bought yet
+    app.route("get", "/payments/status", payments::get_status);
+
+    // Create the Paddle transaction for a credit pack
+    app.route_with(
+        "post",
+        "/payments/checkout",
+        middlewares::require_auth,
+        payments::create_checkout,
+    );
+
+    // Add the credits of a finished checkout
+    app.route_with(
+        "post",
+        "/payments/confirm",
+        middlewares::require_auth,
+        payments::confirm_checkout,
+    );
+
+    // Paddle's notifications (payments, refunds, chargebacks)
+    app.route("post", "/payments/webhook", payments::handle_webhook);
 
     // ------------------------------------------------ //
     // ************ URL ROUTES ************* //

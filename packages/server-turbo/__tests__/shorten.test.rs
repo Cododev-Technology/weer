@@ -132,7 +132,7 @@ mod shortening_a_url {
                     .fetch_one(&*POOL)
                     .await
                     .unwrap();
-            assert_eq!(link_credits, 99);
+            assert_eq!(link_credits, 24);
         });
     }
 

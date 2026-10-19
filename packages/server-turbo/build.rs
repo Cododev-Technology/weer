@@ -1,7 +1,7 @@
 // Turns the JSON5 files that we share with the Node.js server (and the front end) into Rust
 // constants, so the values are written in one place and are still constants here. The files
-// that include them: lib/link-definitions.rs, lib/validation.rs, lib/domain-allowlist.rs and
-// database/schema.rs.
+// that include them: lib/link-definitions.rs, lib/validation.rs, lib/domain-allowlist.rs,
+// lib/paddle.rs and database/schema.rs.
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -62,6 +62,19 @@ fn picked(link: &Value) -> String {
     )
 }
 
+// A pack of credits that can be bought (CreditPack in lib/paddle.rs)
+fn credit_pack(pack: &Value) -> String {
+    format!(
+        "CreditPack {{ credits: {}, price: {}, links_per_dollar: {}, featured: {}, paddle_sandbox: {}, paddle_production: {} }}",
+        pack["credits"],
+        pack["price"],
+        pack["linksPerDollar"],
+        pack["featured"],
+        pack["paddle"]["sandbox"],
+        pack["paddle"]["production"]
+    )
+}
+
 fn main() {
     let links = read("../common/config/links.json5");
     let qr = &links["qr"];
@@ -104,6 +117,21 @@ fn main() {
         strings(
             "const DOMAIN_ALLOWLIST",
             &read("../common/config/domain-allowlist.json5"),
+        ),
+    );
+
+    let packs: Vec<String> = read("../common/config/credit-packs.json5")
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(credit_pack)
+        .collect();
+    write(
+        "credit_packs.rs",
+        format!(
+            "pub const CREDIT_PACKS: [CreditPack; {}] = [{}];\n",
+            packs.len(),
+            packs.join(", ")
         ),
     );
 

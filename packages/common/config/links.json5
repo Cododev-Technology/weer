@@ -68,7 +68,7 @@
     requiresAuth: false,
     // Static top-level route segments registered in router.ts (router.rs in server-turbo). A "custom" code or
     // a username occupying these would collide with a real route.
-    reservedWords: ["auth", "logout", "user", "url", "qr", "q", "redirect-warning"],
+    reservedWords: ["auth", "logout", "user", "url", "qr", "q", "redirect-warning", "payments", "pricing", "checkout", "terms", "privacy", "reset-password"],
   },
   affix: {
     minLength: 1,

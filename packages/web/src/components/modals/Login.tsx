@@ -87,6 +87,7 @@ const Login: FC<LoginProps> = (props) => {
           <a
             className="button button-block button-with-icon button-google-signin"
             href="/auth/google"
+            onClick={lib.rememberPageForLogin}
           >
             <i className="button__icon-left fa-brands fa-google"></i>
             Continue with Google

@@ -17,16 +17,16 @@ const LOGIN_BURST_LIMIT: i32 = 5; // per 10 minutes, per email attempted
 
 async fn enforce_user_limit(user_id: i32) -> Result<(), CpeakError> {
     let link_credits = sqlx::query_scalar::<_, i32>(
-        "UPDATE users SET link_credits = link_credits - 1 WHERE id = $1 RETURNING link_credits",
+        "UPDATE users SET link_credits = link_credits - 1 WHERE id = $1 AND link_credits > 0 RETURNING link_credits",
     )
     .bind(user_id)
     .fetch_optional(&*POOL)
     .await?;
 
-    if link_credits.unwrap_or(0) < 0 {
+    if link_credits.is_none() {
         return Err(CpeakError::new(
             402,
-            "You've used all your credits. Please contact support to increase your limit for free.",
+            "You've used all your credits. You can buy more from the Credits menu.",
         ));
     }
     Ok(())

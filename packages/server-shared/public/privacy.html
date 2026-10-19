@@ -43,7 +43,7 @@
     <main class="legal-container">
       <div class="section legal">
         <h1>Privacy Policy</h1>
-        <p class="legal__updated">Last updated: August 22, 2026</p>
+        <p class="legal__updated">Last updated: October 18, 2026</p>
 
         <p>
           This Privacy Policy explains what information Cododev Technology
@@ -62,19 +62,25 @@
 
         <h3>Account information</h3>
         <p>
-          If you sign in with Google, we receive your name, email address,
-          and Google account identifier from Google. We use this to create
-          and identify your account and to enable features that require
-          an account, such as custom link codes, username-based links, and
-          link statistics.
+          If you sign up with an email address, we store your name, your
+          email address, and your password as a salted hash, never the
+          password itself. If you sign in with Google, we receive your
+          name, email address, and Google account identifier from Google.
+          We use this to create and identify your account and to enable
+          features that require an account, such as custom link codes,
+          username-based links, and link statistics.
         </p>
 
         <h3>Cookies</h3>
-        <p>We use two cookies, each valid for 30 days:</p>
+        <p>We use three cookies, each valid for 30 days:</p>
         <ul>
           <li>
             <strong>uid</strong> — identifies your account when you are
-            signed in.
+            signed in with Google.
+          </li>
+          <li>
+            <strong>token</strong> — identifies your account when you are
+            signed in with your email address and password.
           </li>
           <li>
             <strong>session_token</strong> — lets you manage the links you
@@ -88,6 +94,15 @@
           and creation date for every link you shorten, so that the
           redirect works and so signed-in users can view and manage their
           own links.
+        </p>
+
+        <h3>Purchases</h3>
+        <p>
+          When you buy credits, we keep a record of the purchase: the
+          Paddle transaction ID, the number of credits, the amount paid and
+          its currency, and the date, along with any refund. We never see
+          or store your card or other payment details; Paddle collects
+          those directly.
         </p>
 
         <h3>IP address (abuse prevention)</h3>
@@ -126,6 +141,13 @@
             Web Risk API to screen it for malware, phishing, and other
             unsafe content. Your personal information is not included in
             this request.
+          </li>
+          <li>
+            <strong>Paddle</strong> — our reseller and Merchant of Record
+            processes credit purchases. Paddle receives your email address
+            and the payment, billing, and location details you enter at
+            checkout, and handles them under its own
+            <a href="https://www.paddle.com/legal/privacy">privacy policy</a>.
           </li>
           <li>
             <strong>Hosting infrastructure</strong> — the Service is

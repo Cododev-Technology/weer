@@ -13,7 +13,7 @@ const TOO_MANY_REQUESTS = JSON.stringify({
 });
 const OUT_OF_CREDITS = JSON.stringify({
   error:
-    "You've used all your credits. Please contact support to increase your limit for free.",
+    "You've used all your credits. You can buy more from the Credits menu.",
 });
 
 const anonymous = async () => {
@@ -171,7 +171,7 @@ describe("Rate limiting", () => {
       "SELECT link_credits FROM users WHERE id = $1",
       [user.id]
     );
-    assert.strictEqual(link_credits, 88);
+    assert.strictEqual(link_credits, 13);
 
     const limits = await DB.query("SELECT ip_address FROM rate_limits");
     assert.strictEqual(limits.length, 0);
@@ -197,6 +197,13 @@ describe("Rate limiting", () => {
 
     const urls = await DB.query("SELECT real_url FROM urls");
     assert.deepStrictEqual(urls, [{ real_url: URL }]);
+
+    // The refused attempts don't take the credits below 0
+    const [{ link_credits }] = await DB.query(
+      "SELECT link_credits FROM users WHERE id = $1",
+      [user.id]
+    );
+    assert.strictEqual(link_credits, 0);
   });
 
   it("should let a user use their very last credit", async () => {
