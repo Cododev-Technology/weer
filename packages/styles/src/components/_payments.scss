@@ -1,0 +1,239 @@
+@use "../abstracts/variables" as *;
+
+.credit-packs {
+  margin-top: 2.4rem;
+
+  &__title {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 1rem;
+  }
+
+  &__pack {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid $color-grey-light-3;
+    border-radius: 12px;
+    padding: 1rem 1.2rem 1rem 1.6rem;
+    margin-bottom: 1rem;
+
+    .button {
+      margin-left: auto;
+      min-width: 9rem;
+    }
+  }
+
+  &__credits {
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  &__label {
+    font-size: 1.4rem;
+    margin-left: 0.4rem;
+  }
+
+  &__per {
+    display: block;
+    font-size: 1.3rem;
+    color: #888;
+  }
+
+  &__note {
+    font-size: 1.3rem;
+    color: #888;
+    text-align: center;
+  }
+}
+
+.pricing {
+  display: flex;
+  gap: 2rem;
+  margin: 3rem 0;
+
+  @media only screen and (max-width: 38.75em) {
+    flex-direction: column;
+  }
+
+  &__pack {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    // The same border width on every card keeps the buttons in line
+    border: 2px solid $color-grey-light-3;
+    border-radius: 14px;
+    padding: 3.2rem 2.4rem;
+
+    &--featured {
+      border-color: $color-blue;
+    }
+
+    .button {
+      margin-top: auto;
+      // .legal gives its links a lighter bottom border
+      border-bottom-color: $color-blue;
+    }
+  }
+
+  &__ribbon {
+    position: absolute;
+    top: -1.3rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: $color-blue;
+    color: $color-white;
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    padding: 0.5rem 1.2rem;
+    border-radius: 2rem;
+  }
+
+  &__credits {
+    font-size: 4rem;
+    font-weight: 900;
+    line-height: 1.2;
+    color: #333;
+  }
+
+  &__label {
+    font-size: 1.4rem;
+    color: #888;
+  }
+
+  &__price {
+    font-size: 2.8rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: $color-green;
+    margin: 1.4rem 0 0.4rem;
+  }
+
+  &__per {
+    font-size: 1.4rem;
+    color: #888;
+    margin-bottom: 2.2rem;
+  }
+}
+
+.checkout {
+  display: flex;
+  min-height: 100vh;
+
+  @media only screen and (max-width: 51.25em) {
+    flex-direction: column;
+  }
+
+  &__summary {
+    flex: 1;
+    background-color: #f7f8f9;
+    padding: 4rem 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  &__back {
+    align-self: flex-start;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: $color-blue;
+    margin-bottom: 6rem;
+
+    @media only screen and (max-width: 51.25em) {
+      margin-bottom: 3rem;
+    }
+  }
+
+  &__summary-inner {
+    width: 100%;
+    max-width: 40rem;
+  }
+
+  &__box {
+    background-color: $color-white;
+    border-radius: 8px;
+    padding: 2.4rem 2.8rem;
+    margin-bottom: 1.6rem;
+  }
+
+  &__price {
+    font-size: 3rem;
+    font-weight: 700;
+    color: $color-green;
+    margin-bottom: 1.6rem;
+  }
+
+  &__price-note {
+    font-size: 1.4rem;
+    font-weight: 400;
+    color: $color-text;
+    margin-left: 0.8rem;
+  }
+
+  &__item {
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+
+  &__item-note {
+    font-size: 1.4rem;
+    color: #888;
+    margin-top: 0.4rem;
+  }
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.5rem;
+    padding: 1rem 0;
+
+    &--total {
+      border-top: 1px solid $color-grey-light-3;
+      font-weight: 700;
+    }
+  }
+
+  &__payment {
+    flex: 1;
+    padding: 4rem 3rem;
+    display: flex;
+    justify-content: center;
+  }
+
+  &__frame {
+    width: 100%;
+    max-width: 50rem;
+  }
+
+  &__message {
+    max-width: 40rem;
+    margin-top: 8rem;
+    text-align: center;
+    font-size: 1.6rem;
+
+    p {
+      margin-bottom: 2rem;
+    }
+
+    a {
+      color: $color-blue;
+      font-weight: 700;
+    }
+  }
+
+  &__success-icon {
+    font-size: 5rem;
+    color: $color-green;
+    margin-bottom: 2rem;
+  }
+}

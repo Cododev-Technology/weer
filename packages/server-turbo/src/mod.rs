@@ -17,6 +17,7 @@ pub mod config {
 
 pub mod controllers {
     pub mod auth;
+    pub mod payments;
     pub mod url;
     pub mod user;
 }
@@ -39,6 +40,7 @@ pub mod lib {
     #[path = "link-definitions.rs"]
     pub mod link_definitions;
     pub mod links;
+    pub mod paddle;
     #[path = "rate-limit.rs"]
     pub mod rate_limit;
     pub mod util;

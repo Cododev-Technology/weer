@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import Navigation from "./Navigation";
 import UrlShortener from "./UrlShortener";
 import Urls from "./Urls";
+import Checkout from "./Checkout";
 
 import { AuthProvider } from "../AuthContext";
 import { ModalProvider, useModal } from "../ModalContext";
@@ -19,6 +20,8 @@ const AppContent: React.FC = () => {
       window.history.replaceState({}, "", "/");
     }
   }, []);
+
+  if (window.location.pathname === "/checkout") return <Checkout />;
 
   return (
     <>

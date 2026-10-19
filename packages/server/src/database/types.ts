@@ -12,7 +12,8 @@ export type TTables =
   | "tokens"
   | "email_codes"
   | "email_rate_limits"
-  | "login_rate_limits";
+  | "login_rate_limits"
+  | "payments";
 
 export interface IUser {
   id: number;
@@ -60,6 +61,17 @@ export interface IEmailCode {
   code: number;
   attempts: number;
   expires_at: Date;
+  created_at: Date;
+}
+
+export interface IPayment {
+  id: number;
+  paddle_id: string;
+  transaction_id: string;
+  user_id: number;
+  credits: number;
+  amount: string; // BIGINT, which pg gives as a string
+  currency: string;
   created_at: Date;
 }
 
@@ -111,7 +123,7 @@ export interface IView {
   ip_address?: string;
   country?: string;
   city?: string;
-  visitor_hash: string;
+  visitor_hash: Buffer;
   created_at: Date;
 }
 

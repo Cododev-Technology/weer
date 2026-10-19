@@ -116,6 +116,19 @@ pub struct IEmailCode {
 
 #[derive(Debug, Clone, Default, FromRow)]
 #[sqlx(default)]
+pub struct IPayment {
+    pub id: i32,
+    pub paddle_id: String,
+    pub transaction_id: String,
+    pub user_id: i32,
+    pub credits: i32,
+    pub amount: i64,
+    pub currency: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Default, FromRow)]
+#[sqlx(default)]
 pub struct IUsername {
     pub id: i32,
     pub user_id: Option<i32>,
@@ -163,7 +176,7 @@ pub struct IDigitCode {
 #[derive(Debug, Clone, Default, FromRow)]
 #[sqlx(default)]
 pub struct IView {
-    pub id: i32,
+    pub id: i64,
     pub url_id: i32,
     pub user_agent: Option<String>,
     pub referrer: Option<String>,
@@ -172,7 +185,7 @@ pub struct IView {
     pub ip_address: Option<IpAddr>,
     pub country: Option<String>,
     pub city: Option<String>,
-    pub visitor_hash: Option<String>,
+    pub visitor_hash: Option<Vec<u8>>,
     pub created_at: Option<DateTime<Utc>>,
 }
 

@@ -106,14 +106,14 @@ describe("Auth Endpoints", () => {
       JSON.stringify({
         isSignedIn: true,
         email: "joe@example.com",
-        linkCredits: 100,
+        linkCredits: 25,
         usernames: [],
       })
     );
 
     // A logged in user doesn't get an anonymous session
     assert.strictEqual(res.headers["set-cookie"], undefined);
-    assert.strictEqual(user.link_credits, 100);
+    assert.strictEqual(user.link_credits, 25);
   });
 
   it("should return the usernames of a logged in user", async () => {

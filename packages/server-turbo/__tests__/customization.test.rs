@@ -423,7 +423,7 @@ mod changing_the_type_of_a_url {
                     .fetch_one(&*POOL)
                     .await
                     .unwrap();
-            assert_eq!(link_credits, 98);
+            assert_eq!(link_credits, 23);
         });
     }
 
@@ -447,7 +447,7 @@ mod changing_the_type_of_a_url {
                 res.text,
                 json!({
                     "error":
-                        "You've used all your credits. Please contact support to increase your limit for free.",
+                        "You've used all your credits. You can buy more from the Credits menu.",
                 })
                 .to_string()
             );

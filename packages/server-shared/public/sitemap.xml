@@ -6,6 +6,11 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://weer.pro/pricing</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://weer.pro/terms</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>

@@ -51,7 +51,7 @@ services:
   janitor:
     build: .
     image: weer
-    entrypoint: [ "node", "dist/janitor.js" ]
+    entrypoint: [ "node", "dist/janitor/index.js" ]
     working_dir: /app/packages/server
     restart: on-failure
     profiles: [ "node" ]

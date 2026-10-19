@@ -126,6 +126,14 @@ app.route("get", "/reset-password", (req: Request, res: Response) => {
   res.sendFile(path.join(publicPath, "./index.html"), "text/html");
 });
 
+app.route("get", "/pricing", (req: Request, res: Response) => {
+  res.sendFile(path.join(publicPath, "./pricing.html"), "text/html");
+});
+
+app.route("get", "/checkout", (req: Request, res: Response) => {
+  res.sendFile(path.join(publicPath, "./checkout.html"), "text/html");
+});
+
 // ------ API Routes ------ //
 apiRouter(app);
 

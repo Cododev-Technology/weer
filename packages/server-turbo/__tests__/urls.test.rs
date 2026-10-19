@@ -407,7 +407,7 @@ mod updating_the_destination_of_a_url {
                     .fetch_one(&*POOL)
                     .await
                     .unwrap();
-            assert_eq!(link_credits, 98);
+            assert_eq!(link_credits, 23);
         });
     }
 

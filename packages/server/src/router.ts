@@ -9,6 +9,7 @@ import middlewares from "./middlewares.js";
 import Auth from "./controllers/auth.js";
 import User from "./controllers/user.js";
 import Url from "./controllers/url.js";
+import Payments from "./controllers/payments.js";
 
 // ------------------------------------------------ //
 // ************ AUTH ROUTES ************* //
@@ -88,6 +89,32 @@ export default (app: Cpeak) => {
     middlewares.requireAuth,
     User.changePassword
   );
+
+  // ------------------------------------------------ //
+  // ************ PAYMENT ROUTES ************* //
+  // ------------------------------------------------ //
+
+  // Whether credits can be bought yet
+  app.route("get", "/payments/status", Payments.getStatus);
+
+  // Create the Paddle transaction for a credit pack
+  app.route(
+    "post",
+    "/payments/checkout",
+    middlewares.requireAuth,
+    Payments.createCheckout
+  );
+
+  // Add the credits of a finished checkout
+  app.route(
+    "post",
+    "/payments/confirm",
+    middlewares.requireAuth,
+    Payments.confirmCheckout
+  );
+
+  // Paddle's notifications (payments, refunds, chargebacks)
+  app.route("post", "/payments/webhook", Payments.handleWebhook);
 
   // ------------------------------------------------ //
   // ************ URL ROUTES ************* //

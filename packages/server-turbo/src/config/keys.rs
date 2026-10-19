@@ -45,6 +45,12 @@ pub struct Keys {
     pub rate_limit: bool,
     // Write a line to the info log for every request
     pub request_log: bool,
+    // Paddle (buying credits)
+    pub paddle_environment: String, // sandbox or production
+    pub paddle_api_key: Option<String>,
+    pub paddle_client_token: Option<String>,
+    // Overrides the address of Paddle's API (for the tests)
+    pub paddle_api_url: Option<String>,
 }
 
 pub static KEYS: LazyLock<Keys> = LazyLock::new(|| Keys {
@@ -79,9 +85,17 @@ pub static KEYS: LazyLock<Keys> = LazyLock::new(|| Keys {
     views_stream_shards: get_optional_env("VIEWS_STREAM_SHARDS")
         .and_then(|shards| shards.parse().ok())
         .filter(|shards| *shards > 0)
-        .unwrap_or(16),
+        .unwrap_or(48),
     link_cache: get_optional_env("LINK_CACHE").as_deref() != Some("false"),
     redirect_warning: get_optional_env("REDIRECT_WARNING").as_deref() != Some("false"),
     rate_limit: get_optional_env("RATE_LIMIT").as_deref() != Some("false"),
     request_log: get_optional_env("REQUEST_LOG").as_deref() != Some("false"),
+    paddle_environment: match get_optional_env("PADDLE_ENVIRONMENT").as_deref() {
+        Some("production") => "production",
+        _ => "sandbox",
+    }
+    .to_string(),
+    paddle_api_key: get_optional_env("PADDLE_API_KEY"),
+    paddle_client_token: get_optional_env("PADDLE_CLIENT_TOKEN"),
+    paddle_api_url: get_optional_env("PADDLE_API_URL"),
 });

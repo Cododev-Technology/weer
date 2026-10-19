@@ -618,7 +618,7 @@ pub async fn redirect(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result
         "{}::{user_agent}::{accept_lang}",
         ip.as_deref().unwrap_or("null")
     );
-    let visitor_hash = hex_encode(sha256(fingerprint_source));
+    let visitor_hash = sha256(fingerprint_source);
 
     let link_type = if processed_code.r#type != LinkType::Qr {
         Some(url.link_type)
@@ -637,7 +637,7 @@ pub async fn redirect(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result
             referrer,
             link_type,
             via_qr,
-            visitor_hash,
+            visitor_hash: hex_encode(visitor_hash),
         });
     } else {
         // We have this in case we want to run the server without Redis, but it should not be the default in production because it can cause performance issues.
@@ -650,7 +650,7 @@ pub async fn redirect(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result
         .bind(referrer)
         .bind(link_type)
         .bind(via_qr)
-        .bind(visitor_hash)
+        .bind(visitor_hash.as_slice())
         .execute(&*POOL)
         .await?;
     }
@@ -706,6 +706,11 @@ pub async fn remove(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result<(
     let cached_code = links_cache::code_of(id).await?;
 
     sqlx::query("DELETE FROM urls WHERE id=$1")
+        .bind(id)
+        .execute(&*POOL)
+        .await?;
+    // views has no foreign key to urls (see views.sql), so its views go here
+    sqlx::query("DELETE FROM views WHERE url_id=$1")
         .bind(id)
         .execute(&*POOL)
         .await?;

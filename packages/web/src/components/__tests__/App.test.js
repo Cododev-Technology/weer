@@ -10,18 +10,18 @@ afterEach(() => {
 describe("when user is signed out", () => {
   beforeEach(() => {
     moxios.install();
-    moxios.stubRequest("/auth", {
+    moxios.stubRequest("/auth/status", {
       status: 200,
       response: { isSignedIn: false },
     });
   });
 
-  it("shows the sign in and url shortener boxes", async () => {
+  it("shows the login button and url shortener box", async () => {
     render(<App />);
 
     await waitFor(() => {
       expect(screen.getByTestId("url-shortener")).toBeInTheDocument();
-      expect(screen.getByTestId("sign-in-box")).toBeInTheDocument();
+      expect(screen.getByText("Login")).toBeInTheDocument();
     });
   });
 });
@@ -29,7 +29,7 @@ describe("when user is signed out", () => {
 describe("when user is signed in", () => {
   beforeEach(() => {
     moxios.install();
-    moxios.stubRequest("/auth", {
+    moxios.stubRequest("/auth/status", {
       status: 200,
       response: {
         isSignedIn: true,

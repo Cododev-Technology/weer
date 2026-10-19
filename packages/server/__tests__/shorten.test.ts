@@ -75,7 +75,7 @@ describe("Shortening a URL", () => {
       "SELECT link_credits FROM users WHERE id = $1",
       [user.id]
     ))!;
-    assert.strictEqual(link_credits, 99);
+    assert.strictEqual(link_credits, 24);
   });
 
   it("should create a digit link that expires in 2 hours", async () => {

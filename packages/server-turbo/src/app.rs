@@ -174,6 +174,16 @@ pub fn app() -> Cpeak {
             .await
     });
 
+    app.route("get", "/pricing", async |_req, res| {
+        res.send_file(&format!("{PUBLIC_PATH}/pricing.html"), "text/html")
+            .await
+    });
+
+    app.route("get", "/checkout", async |_req, res| {
+        res.send_file(&format!("{PUBLIC_PATH}/checkout.html"), "text/html")
+            .await
+    });
+
     // ------ API Routes ------ //
     api_router(&mut app);
 

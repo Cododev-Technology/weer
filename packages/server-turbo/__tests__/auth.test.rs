@@ -145,7 +145,7 @@ mod auth_endpoints {
                 json!({
                     "isSignedIn": true,
                     "email": "joe@example.com",
-                    "linkCredits": 100,
+                    "linkCredits": 25,
                     "usernames": [],
                 })
                 .to_string()
@@ -153,7 +153,7 @@ mod auth_endpoints {
 
             // A logged in user doesn't get an anonymous session
             assert!(res.set_cookie.is_empty());
-            assert_eq!(user.link_credits, Some(100));
+            assert_eq!(user.link_credits, Some(25));
         });
     }
 
