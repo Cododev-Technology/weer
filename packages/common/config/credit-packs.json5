@@ -1,5 +1,4 @@
-// The packs of credits that can be bought. Prices are in USD, before tax. production stays empty
-// until the live account has its prices.
+// The packs of credits that can be bought. Prices are in USD, before tax.
 //
 // A change here must also be made in:
 // - Paddle (sandbox and live): the price amounts and names, and a new price for a new pack
@@ -16,7 +15,7 @@
     featured: false,
     paddle: {
       sandbox: "pri_01m57zf6y8pmftvxy6vydfg491",
-      production: "",
+      production: "pri_01m5anrjbzz007x48kf54exb41",
     },
   },
   {
@@ -26,7 +25,7 @@
     featured: true, // "Most popular"
     paddle: {
       sandbox: "pri_01m57zf6zz2na8fcqw6pqr8s86",
-      production: "",
+      production: "pri_01m5anrjeg33swrekxzw09np0n",
     },
   },
   {
@@ -36,7 +35,7 @@
     featured: false,
     paddle: {
       sandbox: "pri_01m57zf71jrb4gzbq3t01fdz61",
-      production: "",
+      production: "pri_01m5anrjhgbb88e9krdhfz5vna",
     },
   },
 ]
