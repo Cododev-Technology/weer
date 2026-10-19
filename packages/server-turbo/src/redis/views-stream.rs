@@ -1,4 +1,5 @@
 use std::cell::Cell;
+use std::sync::LazyLock;
 
 use super::redis::connection;
 use crate::config::keys::KEYS;
@@ -14,12 +15,44 @@ pub struct IViewEvent {
     pub visitor_hash: String,
 }
 
-// The views are spread over KEYS.views_stream_shards streams (weer:stream:views:0,
-// weer:stream:views:1, ...). In a cluster a key lives on one node, so with one stream, every
-// view would go to the same node.
+// The views are spread over KEYS.views_stream_shards streams. In a cluster a key lives on one
+// node, so with one stream, every view would go to the same node.
 pub fn views_stream_key(shard: u32) -> String {
-    format!("weer:stream:views:{shard}")
+    VIEWS_STREAM_KEYS[shard as usize].clone()
 }
+
+// How many slots a Redis cluster has
+const SLOTS: u32 = 16384;
+
+// The slot of a key, which decides its node: the CRC16 of the key (or of its hash tag, the part
+// in {}), mod 16384
+fn slot(key: &str) -> u32 {
+    u32::from(crc16::State::<crc16::XMODEM>::calculate(key.as_bytes())) % SLOTS
+}
+
+/*
+ * Every master owns an equal range of the slots (redis.sh), so each stream gets an equal share of
+ * the slots too, and a hash tag whose slot is in the middle half of that share (so it's never on
+ * the edge of a master's range): weer:stream:views:{10}, weer:stream:views:{18}, ...
+ * With a number of streams that's a multiple of the masters, every master gets the same number of
+ * them. (weer:stream:views:0 to weer:stream:views:47 gave the 12 masters 7 1 5 7 1 5 7 0 4 7 0 4.)
+ */
+static VIEWS_STREAM_KEYS: LazyLock<Vec<String>> = LazyLock::new(|| {
+    let shards = KEYS.views_stream_shards;
+    (0..shards)
+        .map(|shard| {
+            let start = shard * SLOTS / shards;
+            let end = (shard + 1) * SLOTS / shards;
+            let quarter = (end - start) / 4;
+            let middle = (start + quarter)..(end - quarter);
+
+            let tag = (0..)
+                .find(|tag: &u32| middle.contains(&slot(&tag.to_string())))
+                .unwrap_or_default();
+            format!("weer:stream:views:{{{tag}}}")
+        })
+        .collect()
+});
 
 thread_local! {
     // The stream that the next view of this thread goes to. Each thread goes around all of them.
@@ -64,15 +97,15 @@ pub fn push(event: IViewEvent) {
      * This operation is Big O(1).
      * Trimming without the tilde (~) is O(n) and can cause latency spikes when the stream is long.
      *
-     * Get the last entry in the first stream:
-     * XREVRANGE weer:stream:views:0 + - COUNT 1
+     * Get the last entry in the first stream (with 48 streams, see VIEWS_STREAM_KEYS):
+     * XREVRANGE weer:stream:views:{10} + - COUNT 1
      *
      *
-     * XREAD STREAMS weer:stream:views:0 0
+     * XREAD STREAMS weer:stream:views:{10} 0
      *
-     * XINFO STREAM weer:stream:views:0
+     * XINFO STREAM weer:stream:views:{10}
      *
-     * XINFO GROUPS weer:stream:views:0
+     * XINFO GROUPS weer:stream:views:{10}
      *
      * It runs on the worker thread that handled the redirect, with that thread's connection,
      * so the views of every worker don't have to go through one thread.

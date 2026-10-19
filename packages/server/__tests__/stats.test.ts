@@ -4,9 +4,8 @@ import { describe, it } from "mocha";
 import app from "./helpers/target.js";
 import { DB } from "../src/database/index.js";
 import type { IView } from "../src/database/types.js";
-import { redis } from "../src/redis/redis.js";
-import { VIEWS_STREAM_KEY } from "../src/redis/views-stream.js";
 import keys from "../src/config/keys.js";
+import { lastViews } from "./helpers/views.js";
 
 // A destination on the domain allowlist, so the server never has to ask the Web Risk API about it
 const URL = "https://github.com/agile8118/weer";
@@ -83,9 +82,9 @@ describe("Getting the stats of a URL", () => {
     await request(app).get("/" + shortened_url_id).set("User-Agent", "Browser A");
     await request(app).get("/q/" + qr_code_id).set("User-Agent", "Browser B");
 
-    // With Redis, the views wait in a stream for the janitor to save them (see janitor.ts)
+    // With Redis, the views wait in a stream for the janitor to save them (see janitor/views.ts)
     if (keys.redisEnabled) {
-      const entries = await redis.xrevrange(VIEWS_STREAM_KEY, "+", "-", "COUNT", 3);
+      const entries = await lastViews(3);
       const views = entries.map(([, fields]) => fields.join(" "));
 
       assert.strictEqual(views.length, 3);

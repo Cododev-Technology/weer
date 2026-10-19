@@ -30,8 +30,15 @@ export default {
   // Redis
   redisUrl: getEnv("REDIS_URL"),
   redisEnabled: getEnv("REDIS") === "true",
-  // server-turbo's Redis cluster (comma separated), which the seed flushes too
+  // Use the Redis cluster (REDIS_CLUSTER_NODES) instead of the single Redis (REDIS_URL), like
+  // server-turbo does
+  redisCluster: getOptionalEnv("REDIS_CLUSTER") === "true",
+  // The Redis cluster (comma separated), which the seed flushes too
   redisClusterNodes: getOptionalEnv("REDIS_CLUSTER_NODES"),
+  // In the cluster, how many streams the views are spread over, so they land on more than one node
+  viewsStreamShards: Number(getOptionalEnv("VIEWS_STREAM_SHARDS")) || 48,
+  // Save the links in Redis once they're visited, so the next visits skip the database
+  linkCache: getOptionalEnv("LINK_CACHE") !== "false",
   // Show the warning page before redirecting to a domain that isn't on the allowlist
   redirectWarning: getOptionalEnv("REDIRECT_WARNING") !== "false",
   // Limit how many links, emails and logins a visitor or a user can make (see lib/rate-limit.ts)

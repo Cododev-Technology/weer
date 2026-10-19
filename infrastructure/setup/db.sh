@@ -13,7 +13,7 @@ CONF=$(ls -d /etc/postgresql/*/main)
 # Listen on the private network too, not only on localhost
 echo "listen_addresses = '*'" >> "$CONF/postgresql.conf"
 
-# For writing about 1M views/s, the settings that reached it in our db test. 30 minutes: the same
+# Some database tuning for handing 1 million HTTP requests per second
 cat >> "$CONF/postgresql.conf" <<'EOF'
 shared_buffers = 16GB
 wal_buffers = 256MB
@@ -22,6 +22,7 @@ min_wal_size = 4GB
 checkpoint_timeout = 15min
 checkpoint_completion_target = 0.9
 wal_compression = lz4
+max_connections = 1000 # room for the url-shortener repo's pool (200) and the Node.js server's (48 workers x 16)
 EOF
 
 # No password from the machines of this subnet (the server) or from an ssh tunnel (localhost).

@@ -1,12 +1,3 @@
-# The load test machines: the weer server, a tester and a PostgreSQL machine, as Spot instances.
-#
-#   terraform init      once
-#   terraform apply     start the 3 machines and print their addresses
-#   terraform destroy   stop paying for them
-#
-# Each machine sets itself up when it boots (basic-setup.sh, then its own script), which takes a
-# few minutes. ssh in and run "cloud-init status --wait" to know when it's done.
-
 # Sized for 1M req/s for 2 minutes (120M requests), from our load test measurements.
 # The comments say what changes for 30 minutes (1.8 billion requests).
 locals {
@@ -26,15 +17,16 @@ locals {
   #   c8gn.24xlarge      96  192 GB   300 Gbit            1.11       64
   #   c8gn.48xlarge     192  384 GB   600 Gbit            1.45      128
 
-  ami             = "ami-0c8db2e74523f6b6b" # Ubuntu 26.04 for ARM
-  zone            = "us-east-2a"
-  key             = "key"                  # key.pem
-  security_group  = "sg-05c53562fdfc60265" # allow-all
-  placement_group = "GroupA"
+  # Just for our peace of mind: The most each machine may cost per hour, so the worst case is $2.87/hour instead of on-demand's
+  # $6.81. Above a cap the machine doesn't start (apply fails at once), or AWS takes it back.
+  server_max_price = "1.20" # the 90-day Spot high was 1.13, on-demand is 2.84
+  tester_max_price = "1.20"
+  db_max_price     = "0.30" # the 90-day Spot high was 0.25, on-demand is 0.95
 }
 
-provider "aws" {
-  region = "us-east-2"
+# Every machine runs setup/basic.sh first (with setup/bashrc in it), then its own script
+locals {
+  basic_setup = templatefile("setup/basic.sh", { bashrc = file("setup/bashrc") })
 }
 
 resource "aws_instance" "db" {
@@ -42,17 +34,20 @@ resource "aws_instance" "db" {
   instance_type          = local.db_type
   availability_zone      = local.zone
   key_name               = local.key
-  vpc_security_group_ids = [local.security_group]
-  placement_group        = local.placement_group
-  user_data              = "${file("basic-setup.sh")}\n${file("db-setup.sh")}"
+  vpc_security_group_ids = [aws_security_group.load_test.id]
+  placement_group        = aws_placement_group.load_test.name
+  user_data              = "${local.basic_setup}\n${file("setup/db.sh")}"
   tags                   = { Name = "db" }
 
   instance_market_options {
     market_type = "spot"
+    spot_options {
+      max_price = local.db_max_price
+    }
   }
 
   root_block_device {
-    volume_size = 50 # GB: 16 GB of views (133 bytes each) + 16 GB of WAL + Ubuntu. 30 minutes: 300 (240 GB of views)
+    volume_size = 500 # GB: a minute of 1M req/s adds about 8 GB of views (133 bytes each; 16 GB with real browser rows), plus up to 16 GB of WAL and Ubuntu. About an hour of 1M
     volume_type = "gp3"
     iops        = 8000 # it did up to 4,700 writes/s; at least 4 per MB/s of throughput. 30 minutes: the same
     throughput  = 1000 # MB/s: 320-540 MB/s at 1M (820 with real browser rows). 30 minutes: the same
@@ -64,17 +59,20 @@ resource "aws_instance" "server" {
   instance_type          = local.server_type
   availability_zone      = local.zone
   key_name               = local.key
-  vpc_security_group_ids = [local.security_group]
-  placement_group        = local.placement_group
-  user_data              = "${file("basic-setup.sh")}\n${file("server-setup.sh")}"
+  vpc_security_group_ids = [aws_security_group.load_test.id]
+  placement_group        = aws_placement_group.load_test.name
+  user_data              = "${local.basic_setup}\n${file("setup/server.sh")}"
   tags                   = { Name = "server" }
 
   instance_market_options {
     market_type = "spot"
+    spot_options {
+      max_price = local.server_max_price
+    }
   }
 
   root_block_device {
-    volume_size = 25 # GB: 11 GB of request logs (95 bytes each) + 7 GB of the rest. 30 minutes: 200 (171 GB of logs)
+    volume_size = 500 # GB: a minute of 1M req/s adds about 5.7 GB of request logs (95 bytes each), plus 7 GB of the rest. About 85 minutes of 1M
     volume_type = "gp3"
     throughput  = 250 # MB/s: the logs write 95 MB/s at 1M (the default is 125). 30 minutes: the same
   }
@@ -85,13 +83,16 @@ resource "aws_instance" "tester" {
   instance_type          = local.tester_type
   availability_zone      = local.zone
   key_name               = local.key
-  vpc_security_group_ids = [local.security_group]
-  placement_group        = local.placement_group
-  user_data              = "${file("basic-setup.sh")}\n${file("tester-setup.sh")}"
+  vpc_security_group_ids = [aws_security_group.load_test.id]
+  placement_group        = aws_placement_group.load_test.name
+  user_data              = "${local.basic_setup}\n${file("setup/tester.sh")}"
   tags                   = { Name = "tester" }
 
   instance_market_options {
     market_type = "spot"
+    spot_options {
+      max_price = local.tester_max_price
+    }
   }
 
   root_block_device {
@@ -107,3 +108,12 @@ output "db" { value = aws_instance.db.public_ip }
 # Private addresses: DB_HOST in the server's .env, and --url http://<server_private_ip>:2080 on the tester
 output "server_private_ip" { value = aws_instance.server.private_ip }
 output "db_private_ip" { value = aws_instance.db.private_ip }
+
+# Ready to paste
+output "ssh" {
+  value = {
+    server = "ssh -i ~/.ssh/key.pem ubuntu@${aws_instance.server.public_ip}"
+    tester = "ssh -i ~/.ssh/key.pem ubuntu@${aws_instance.tester.public_ip}"
+    db     = "ssh -i ~/.ssh/key.pem ubuntu@${aws_instance.db.public_ip}"
+  }
+}

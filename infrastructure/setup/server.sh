@@ -16,6 +16,9 @@ echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://pack
 apt-get update
 apt-get install -y redis
 
+# Installing Go. Just needed for the demo, Weer doesn't need it
+apt-get install -y golang-go
+
 # The rest as the ubuntu user, in its home folder
 sudo -u ubuntu -i bash <<'EOF'
 set -ex

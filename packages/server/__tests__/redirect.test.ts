@@ -6,9 +6,9 @@ import { describe, it } from "mocha";
 import app from "./helpers/target.js";
 import { DB } from "../src/database/index.js";
 import { redis } from "../src/redis/redis.js";
-import { VIEWS_STREAM_KEY } from "../src/redis/views-stream.js";
 import keys from "../src/config/keys.js";
 import { createUser } from "./helpers/factories/user.js";
+import { lastViews, streamsLength } from "./helpers/views.js";
 
 const publicPath = new URL("../../server-shared/public", import.meta.url)
   .pathname;
@@ -41,7 +41,7 @@ const anonymous = async () => {
 // The view that the last redirect has saved, from Redis or from the database
 const savedView = async () => {
   if (keys.redisEnabled) {
-    const [[, fields]] = await redis.xrevrange(VIEWS_STREAM_KEY, "+", "-", "COUNT", 1);
+    const [[, fields]] = await lastViews(1);
     const entry: Record<string, string> = {};
     for (let i = 0; i < fields.length; i += 2) entry[fields[i]] = fields[i + 1];
 
@@ -269,12 +269,12 @@ describe("Redirecting to the real URL", () => {
   });
 
   it("should not save a view if the link was not found", async () => {
-    const before = keys.redisEnabled ? await redis.xlen(VIEWS_STREAM_KEY) : 0;
+    const before = keys.redisEnabled ? await streamsLength() : 0;
 
     await request(app).get("/nope12");
 
     if (keys.redisEnabled) {
-      assert.strictEqual(await redis.xlen(VIEWS_STREAM_KEY), before);
+      assert.strictEqual(await streamsLength(), before);
     } else {
       const views = await DB.query("SELECT id FROM views");
       assert.strictEqual(views.length, 0);
@@ -354,5 +354,68 @@ describe("The redirect warning page", () => {
       assert.strictEqual(res.statusCode, 200, query);
       assert.strictEqual(res.text, JSON.stringify({ realUrl: null }), query);
     }
+  });
+});
+
+// A classic link that was visited is saved in Redis (see redis/links-cache.ts). These pass
+// without Redis too: then they just check the database.
+describe("A link that was visited before", () => {
+  // Visits the link, and waits until Redis has it (the redirect doesn't wait for that)
+  const visit = async (code: string) => {
+    await request(app).get(`/${code}`);
+
+    if (keys.redisEnabled && keys.linkCache) {
+      for (let i = 0; i < 100; i++) {
+        if (await redis.get(`weer:link:${code}`)) return;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      throw new Error("the link was never saved in Redis");
+    }
+  };
+
+  it("should go to its new destination once it changes", async () => {
+    const agent = await anonymous();
+    const link = await createLink(agent, "classic", TRUSTED_URL);
+    await visit(link.code);
+
+    const newUrl = `${TRUSTED_URL}/pulls`;
+    const edited = await agent
+      .patch(`/url/${link.URLId}/real-url`)
+      .send({ url: newUrl });
+    assert.strictEqual(edited.statusCode, 200);
+
+    const res = await request(app).get(`/${link.code}`);
+    assert.strictEqual(res.headers.location, newUrl);
+  });
+
+  it("should be gone once it is deleted", async () => {
+    const agent = await anonymous();
+    const link = await createLink(agent, "classic", TRUSTED_URL);
+    await visit(link.code);
+
+    const deleted = await agent.delete(`/url/${link.URLId}`);
+    assert.strictEqual(deleted.statusCode, 200);
+
+    const res = await request(app).get(`/${link.code}`);
+    assert.strictEqual(res.text, fs.readFileSync(publicPath + "/404.html", "utf8"));
+  });
+
+  it("should not be found on its old code once it gets a new one", async () => {
+    const agent = await anonymous();
+    const link = await createLink(agent, "classic", TRUSTED_URL);
+    const oldCode = link.code;
+    await visit(oldCode);
+
+    const changed = await agent
+      .patch(`/url/${link.URLId}/type`)
+      .send({ type: "classic" });
+    const newCode = changed.body.code;
+    assert.notStrictEqual(newCode, oldCode);
+
+    const old = await request(app).get(`/${oldCode}`);
+    assert.strictEqual(old.text, fs.readFileSync(publicPath + "/404.html", "utf8"));
+
+    const renewed = await request(app).get(`/${newCode}`);
+    assert.strictEqual(renewed.headers.location, TRUSTED_URL);
   });
 });

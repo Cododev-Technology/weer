@@ -27,8 +27,8 @@ packages/
 
 `packages/server-turbo/` is a Rust port of `packages/server/`, built on Cpeak for Rust. It should mirror the Node.js server and act the same way, except for:
 
-- **Redis mode**: the Node.js server runs Redis in single mode (`REDIS_URL`), while server-turbo runs it in cluster mode (`REDIS_CLUSTER_NODES`). This means the janitor is different too: in a cluster a key lives on one node, so server-turbo spreads the views over `VIEWS_STREAM_SHARDS` streams (`weer:stream:views:0`, `weer:stream:views:1`, ...) instead of the Node.js server's single `weer:stream:views`, and its janitor drains each of them in a loop of its own. When the Node.js server's views stream or janitor changes, make the same change in server-turbo, adapted to the shards.
-- **Link caching**: server-turbo caches links in the Redis cluster (`src/redis/links-cache.rs`). The Node.js server has no link caching and doesn't need it.
+- **Redis mode**: server-turbo always runs Redis in cluster mode (`REDIS_CLUSTER_NODES`). The Node.js server runs it in single mode (`REDIS_URL`), or in cluster mode like server-turbo with `REDIS_CLUSTER=true`. In a cluster a key lives on one node, so there the views are spread over `VIEWS_STREAM_SHARDS` streams, named so that every master gets the same number of them (`weer:stream:views:{10}`, `weer:stream:views:{18}`, ..., see `redis/views-stream.rs` and `.ts`), instead of the single `weer:stream:views`, and the janitor drains each of them in a loop of its own. Both servers must keep the same stream names. When the views stream or janitor of one server changes, make the same change in the other.
+- **Link caching**: both servers cache the visited classic links in Redis (`LINK_CACHE`, on unless it's `false`, and only with `REDIS=true`): server-turbo in the cluster (`src/redis/links-cache.rs`), the Node.js server in the Redis it uses (`src/redis/links-cache.ts`). Since both do it, it's no longer a difference.
 
 ## Commands
 

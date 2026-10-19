@@ -13,6 +13,7 @@ import type {
 } from "../database/types.js";
 import util from "../lib/util.js";
 import { push as pushView } from "../redis/views-stream.js";
+import * as linksCache from "../redis/links-cache.js";
 import keys from "../config/keys.js";
 import { isAllowlistedDomain } from "../lib/domain-allowlist.js";
 import { refundUserCredit } from "../lib/rate-limit.js";
@@ -215,12 +216,17 @@ const changeUrlType = async (req: Request<API.Url.ChangeTypeBody>, res: Response
     return res.status(400).json({ message: "Missing parameters" });
   }
 
+  const cachedCode = await linksCache.codeOf(id);
+
   try {
     return await changeUrlTypeInternal(req, res, id, newType);
   } catch (error) {
     // rateLimitUrl already spent a credit for this, refund it on error
     if (req.user) await refundUserCredit(req.user.id);
     throw error;
+  } finally {
+    // The old code is gone (or, if this failed half way, might be), so it can't stay saved
+    await linksCache.forget(cachedCode);
   }
 };
 
@@ -409,11 +415,23 @@ async function resolveUrlRecord(
       `,
         [processedCode.code]
       );
-    case "classic":
-      return DB.find<IUrl>(
+    case "classic": {
+      // Saved in Redis once it's been visited (see redis/links-cache.ts)
+      if (linksCache.isEnabled()) {
+        const cached = await linksCache.get(processedCode.code);
+        if (cached) return cached;
+      }
+
+      const url = await DB.find<IUrl>(
         `SELECT real_url, id, link_type FROM urls WHERE shortened_url_id=$1`,
         [processedCode.code]
       );
+
+      if (linksCache.isEnabled() && url) {
+        linksCache.set(processedCode.code, url);
+      }
+      return url;
+    }
     case "digit":
       return DB.find<IUrl>(
         `
@@ -549,10 +567,14 @@ const redirectWarningData = async (req: Request, res: Response) => {
 
 // Delete a url record
 const remove = async (req: Request, res: Response) => {
+  const cachedCode = await linksCache.codeOf(Number(req.params?.id));
+
   await DB.delete<IUrl>("urls", `id=$1`, [req.params?.id]);
   // views has no foreign key to urls (see views.sql), so its views go here
   // (not DB.delete: it returns every deleted row, and a link can have millions of views)
   await DB.query(`DELETE FROM views WHERE url_id=$1`, [req.params?.id]);
+
+  await linksCache.forget(cachedCode);
   res.json({ message: "deleted" });
 };
 
@@ -654,7 +676,11 @@ const updateRealUrl = async (req: Request<API.Url.UpdateRealUrlBody>, res: Respo
     throw { status: 400, message: "Missing parameters" };
   }
 
+  const cachedCode = await linksCache.codeOf(id);
+
   await DB.update<IUrl>("urls", { real_url: newRealUrl }, `id = $2`, [id]);
+
+  await linksCache.forget(cachedCode);
 
   return res.json({ realUrl: newRealUrl });
 };

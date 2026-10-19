@@ -1,9 +1,16 @@
-import { Redis } from "ioredis";
+import { Redis, Cluster } from "ioredis";
 import keys from "../config/keys.js";
 
-export const redis = new Redis(keys.redisUrl, {
-  lazyConnect: true,
-});
+// The cluster sends every command to the node that has its key, so the rest of the code uses
+// both the same way
+export const redis: Redis | Cluster = keys.redisCluster
+  ? new Cluster(
+      (keys.redisClusterNodes ?? "").split(",").map((node) => node.trim()),
+      { lazyConnect: true }
+    )
+  : new Redis(keys.redisUrl, {
+      lazyConnect: true,
+    });
 
 if (keys.redisEnabled) {
   void redis.connect();

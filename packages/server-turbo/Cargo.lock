@@ -2264,6 +2264,7 @@ dependencies = [
  "aws-smithy-http-client",
  "chrono",
  "cpeak",
+ "crc16",
  "image",
  "json5",
  "qrcode",
