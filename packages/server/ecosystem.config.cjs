@@ -3,7 +3,7 @@ module.exports = {
     {
       name: "weer",
       script: "dist/index.js",
-      instances: "2",
+      instances: "max",
       exec_mode: "cluster",
       autorestart: true,
       watch: false,

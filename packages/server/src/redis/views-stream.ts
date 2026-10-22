@@ -55,7 +55,7 @@ let nextShard = 0;
 // The cluster: it leaves room for the views the janitor is behind on, like server-turbo: 6.25M per
 // stream, so 300M over all 48 streams, which is 5 minutes at 1M views/s (121 bytes a view, so
 // about 36 GB of Redis). Past that, the oldest views are dropped, saved or not.
-const MAX_LEN = keys.redisCluster ? 6_250_000 : 100_000;
+const MAX_LEN = keys.redisCluster ? 6_250_000 : 100_000_000;
 
 export function push(event: IViewEvent): void {
   const fields: (string | number)[] = [

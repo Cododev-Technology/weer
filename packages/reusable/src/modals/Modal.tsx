@@ -5,7 +5,7 @@ interface componentProps {
   children: React.ReactNode;
   header: string;
   open: boolean;
-  type?: "small" | "narrow";
+  type?: "small" | "narrow" | "wide";
   onClose: any;
 }
 
@@ -13,6 +13,7 @@ const Modal = ({ children, header, open, type, onClose }: componentProps) => {
   let className = open ? "mdl" : "mdl u-display-none";
   if (type === "small") className += " mdl-sm";
   if (type === "narrow") className += " mdl-narrow";
+  if (type === "wide") className += " mdl-wide";
   return createPortal(
     <div className={className}>
       <div className="mdl__content">

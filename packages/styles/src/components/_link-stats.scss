@@ -1,39 +1,415 @@
+@use "sass:color";
+@use "../abstracts/variables" as *;
+
 // Styles for the Link Stats modal
 
-.link-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.6rem;
-  padding: 1rem 0 0.5rem;
+// The chart palette, checked for color blindness (in this order): blue, orange, aqua
+$series-1: $color-blue;
+$series-2: #eb6834;
+$series-3: #1baf7a;
 
-  &__card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 2rem 1rem;
-    border: 1px solid #e8ecf0;
-    border-radius: 8px;
-    text-align: center;
+$card-border: #e8ecf0;
+$muted: #8a94a0;
+$grid: #eef1f4;
+$ink: #333;
+
+.link-stats {
+  transition: opacity 0.2s;
+
+  &--loading {
+    opacity: 0.55;
   }
 
-  &__value {
-    font-size: 2.8rem;
-    font-weight: 700;
-    color: #3c3c72;
-    line-height: 1;
-    margin-bottom: 0.8rem;
+  &__link {
+    margin: -0.4rem 0 1.4rem;
+    font-size: 1.4rem;
+    color: $muted;
+    word-break: break-all;
+  }
 
-    &--date {
-      font-size: 1.8rem;
-      line-height: 1.3;
+  &__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.2rem;
+    margin-bottom: 1.6rem;
+  }
+
+  &__ranges,
+  &__export {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  &__export-label {
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $muted;
+    margin-right: 0.4rem;
+
+    i {
+      margin-right: 0.4rem;
     }
   }
 
-  &__label {
+  &__tiles {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.2rem;
+    margin-bottom: 1.2rem;
+
+    @media only screen and (max-width: 51.25em) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  &__tile {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 1.4rem 1.6rem;
+    border: 1px solid $card-border;
+    border-radius: 12px;
+  }
+
+  &__tile-label {
     font-size: 1.2rem;
-    font-weight: 500;
-    color: #999;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    color: $muted;
+  }
+
+  &__tile-value {
+    margin-top: 0.4rem;
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: $color-default;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &--text {
+      font-size: 2.4rem;
+      line-height: 1.5;
+      white-space: normal;
+    }
+  }
+
+  &__tile-detail {
+    font-size: 1.3rem;
+    color: $muted;
+  }
+
+  &__note {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin: 0 0 1.2rem;
+    font-size: 1.35rem;
+    color: $muted;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.2rem;
+    margin-bottom: 1.2rem;
+
+    @media only screen and (max-width: 51.25em) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__shares {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.4rem;
+
+    @media only screen and (max-width: 38.75em) {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+.stats-card {
+  min-width: 0;
+  margin-bottom: 1.2rem;
+  padding: 1.6rem;
+  border: 1px solid $card-border;
+  border-radius: 12px;
+
+  .link-stats__grid & {
+    margin-bottom: 0;
+  }
+
+  &__title {
+    margin: 0 0 1.2rem;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: $ink;
+  }
+
+  &__empty {
+    margin: 0.4rem 0;
+    font-size: 1.4rem;
+    color: $muted;
+  }
+
+  &__footer {
+    margin-top: 1rem;
+    font-size: 1.2rem;
+
+    a,
+    a:visited {
+      color: $muted;
+    }
+  }
+}
+
+// The bar chart of the clicks over time
+.clicks-chart {
+  position: relative;
+
+  &__svg {
+    display: block;
+    overflow: visible;
+
+    &:focus {
+      outline: none;
+    }
+
+    &:focus-visible {
+      outline: 2px solid rgba($color-blue, 0.4);
+      outline-offset: 4px;
+      border-radius: 4px;
+    }
+  }
+
+  &__grid {
+    stroke: $grid;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+  }
+
+  &__tick {
+    fill: $muted;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__peak {
+    fill: $color-text;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  &__bar {
+    fill: $series-1;
+    transition: fill 0.15s;
+
+    &--active {
+      fill: color.adjust($series-1, $lightness: 14%);
+    }
+  }
+
+  &__hit {
+    fill: transparent;
+  }
+
+  &__empty {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 26px;
+    left: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: $muted;
+    pointer-events: none;
+  }
+
+  &__tooltip {
+    position: absolute;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    padding: 0.6rem 1rem;
+    font-size: 1.25rem;
+    color: $muted;
+    white-space: nowrap;
+    background-color: $color-white;
+    border: 1px solid $card-border;
+    border-radius: 8px;
+    box-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.12);
+    transform: translate(-50%, -100%);
+    pointer-events: none;
+
+    strong {
+      font-size: 1.5rem;
+      color: $ink;
+    }
+  }
+}
+
+// The top countries and referrers
+.top-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  &__item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.7rem 1rem;
+    font-size: 1.4rem;
+    border-radius: 6px;
+
+    & + & {
+      margin-top: 0.4rem;
+    }
+  }
+
+  &__bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    background-color: rgba($series-1, 0.12);
+    border-radius: 6px;
+  }
+
+  &__label {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    width: 2rem;
+    text-align: center;
+    color: $muted;
+  }
+
+  &__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: $ink;
+  }
+
+  &__value {
+    position: relative;
+    font-weight: 700;
+    color: $ink;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__percent {
+    position: relative;
+    width: 4.4rem;
+    text-align: right;
+    font-size: 1.3rem;
+    color: $muted;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// The share of each device, and of the link and the QR code
+.share-bar {
+  &__label {
+    margin-bottom: 0.8rem;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: $color-text;
+  }
+
+  &__track {
+    display: flex;
+    gap: 2px;
+    height: 1.2rem;
+    border-radius: 6px;
+    overflow: hidden;
+
+    &--empty {
+      background-color: $grid;
+    }
+  }
+
+  &__part {
+    min-width: 2px;
+
+    &--1 {
+      background-color: $series-1;
+    }
+
+    &--2 {
+      background-color: $series-2;
+    }
+
+    &--3 {
+      background-color: $series-3;
+    }
+  }
+
+  &__legend {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+  }
+
+  &__legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.3rem 0;
+    font-size: 1.4rem;
+  }
+
+  &__swatch {
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 3px;
+  }
+
+  &__icon {
+    width: 1.8rem;
+    text-align: center;
+    color: $muted;
+  }
+
+  &__name {
+    flex: 1;
+    color: $ink;
+  }
+
+  &__value {
+    font-weight: 700;
+    color: $ink;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__percent {
+    width: 4.4rem;
+    text-align: right;
+    font-size: 1.3rem;
+    color: $muted;
+    font-variant-numeric: tabular-nums;
   }
 }

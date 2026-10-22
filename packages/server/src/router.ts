@@ -10,6 +10,7 @@ import Auth from "./controllers/auth.js";
 import User from "./controllers/user.js";
 import Url from "./controllers/url.js";
 import Payments from "./controllers/payments.js";
+import Analytics from "./controllers/analytics.js";
 
 // ------------------------------------------------ //
 // ************ AUTH ROUTES ************* //
@@ -165,4 +166,10 @@ export default (app: Cpeak) => {
 
   // Get stats for a single shortened link
   app.route("get", "/url/:id/stats", middlewares.checkUrlOwnership, Url.getStats);
+
+  // Get the dashboard of a link: its clicks over time and its top countries, referrers and devices
+  app.route("get", "/url/:id/analytics", middlewares.checkUrlOwnership, Analytics.getAnalytics);
+
+  // Download the views of a link as a CSV, JSON or SQL file, without the IP addresses
+  app.route("get", "/url/:id/views/export", middlewares.checkUrlOwnership, Analytics.exportViews);
 };

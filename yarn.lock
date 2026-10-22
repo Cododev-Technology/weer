@@ -4384,6 +4384,11 @@ isarray@~1.0.0:
   resolved "https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz"
   integrity sha512-VLghIWNM6ELQzo7zwmcg0NmTVyWKYjvIeM83yjp0wRDTmUnrM678fQbcKBo6n2CJEF0szoG//ytg+TKla89ALQ==
 
+isbot@5.2.2:
+  version "5.2.2"
+  resolved "https://registry.yarnpkg.com/isbot/-/isbot-5.2.2.tgz#4c6c4c9b1391a91e490077f9323418693140c416"
+  integrity sha512-iQcBXcd+Rv/pkubRyGh2utW2j1oPG5hZY6TUhVPpqK4G+o3IbxpJNx04hgksjc/N7GK5pEorUxDeg31cFgEk/w==
+
 isexe@^2.0.0:
   version "2.0.0"
   resolved "https://registry.npmjs.org/isexe/-/isexe-2.0.0.tgz"
@@ -5029,6 +5034,14 @@ math-intrinsics@^1.1.0:
   resolved "https://registry.npmjs.org/math-intrinsics/-/math-intrinsics-1.1.0.tgz"
   integrity sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==
 
+maxmind@5.0.7:
+  version "5.0.7"
+  resolved "https://registry.yarnpkg.com/maxmind/-/maxmind-5.0.7.tgz#c7e24e7a15f9af5e66b07aa8a0c188fa2992d68d"
+  integrity sha512-+w637dwfv01MKjkrp4sKDBTEKHLPvWLYb647QTjiz3wG/teSemqudIKNShaS6eqZ7ffxC9oZlQQgIqY0rGojog==
+  dependencies:
+    mmdb-lib "3.0.3"
+    tiny-lru "13.0.0"
+
 memorystream@^0.3.1:
   version "0.3.1"
   resolved "https://registry.npmjs.org/memorystream/-/memorystream-0.3.1.tgz"
@@ -5112,6 +5125,11 @@ minimist@^1.1.0:
   version "7.1.2"
   resolved "https://registry.npmjs.org/minipass/-/minipass-7.1.2.tgz"
   integrity sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==
+
+mmdb-lib@3.0.3:
+  version "3.0.3"
+  resolved "https://registry.yarnpkg.com/mmdb-lib/-/mmdb-lib-3.0.3.tgz#3f19c7bc7733b6da01c9e08f5eeb5163929944e1"
+  integrity sha512-xQPoBXcNjjHiOvOraFBKtA++uNWF6aCVHL9dRKFXEov8eI3QJwtgiw3qApsonFT5SpoqsEVISUTg3HIDs2DiXw==
 
 mocha@^11.7.2:
   version "11.7.2"
@@ -6453,6 +6471,11 @@ timestring@^6.0.0:
   version "6.0.0"
   resolved "https://registry.yarnpkg.com/timestring/-/timestring-6.0.0.tgz#b0c7c331981ecf2066ce88bcfb8ee3ae32e7a0f6"
   integrity sha512-wMctrWD2HZZLuIlchlkE2dfXJh7J2KDI9Dwl+2abPYg0mswQHfOAyQW3jJg1pY5VfttSINZuKcXoB3FGypVklA==
+
+tiny-lru@13.0.0:
+  version "13.0.0"
+  resolved "https://registry.yarnpkg.com/tiny-lru/-/tiny-lru-13.0.0.tgz#6f68dc7e9b86c162f8ecae712895e6fa9f3ac2d9"
+  integrity sha512-xDHxKKS1FdF0Tv2P+QT7IeSEg74K/8cEDzbv3Tv6UyHHUgBOjOiQiBp818MGj66dhurQus/IBcoAbwIKtSGc6Q==
 
 tldts-core@^6.1.86:
   version "6.1.86"

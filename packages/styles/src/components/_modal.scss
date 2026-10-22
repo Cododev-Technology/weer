@@ -102,6 +102,20 @@
   }
 }
 
+.mdl-wide {
+  .mdl__content {
+    max-width: 96rem;
+
+    @media only screen and (max-width: 62.5em) {
+      max-width: 90%;
+    }
+
+    @media only screen and (max-width: 38.75em) {
+      max-width: 95%;
+    }
+  }
+}
+
 .mdl-sm {
   .mdl__header {
     border: none;

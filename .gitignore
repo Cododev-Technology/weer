@@ -33,3 +33,6 @@ packages/common/src/config
 packages/server/dist
 packages/server-turbo/target
 
+# The DB-IP country database (downloaded with yarn geo)
+packages/server-shared/geo/*.mmdb
+

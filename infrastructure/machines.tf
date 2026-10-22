@@ -1,9 +1,7 @@
-# Sized for 1M req/s for 2 minutes (120M requests), from our load test measurements.
-# The comments say what changes for 30 minutes (1.8 billion requests).
 locals {
-  server_type = "c8gn.12xlarge" # about 30 busy cores at 1M (server-turbo, 12 Redis masters, network). 30 minutes: the same
-  tester_type = "c8gn.12xlarge" # about 31 busy cores at 1M (32,000 req/s per core). 30 minutes: the same
-  db_type     = "c8gn.4xlarge"  # 1.1M views/s on 16 cores with COPY. 30 minutes: the same
+  server_type = "c8gn.12xlarge" // Power Server
+  tester_type = "c8gn.12xlarge" // Power Tester
+  db_type     = "c8gn.4xlarge" // PostgreSQL database
 
   #   type            vCPUs  memory   network       Spot $/hour  queues
   #   c8gn.medium         1    2 GB   up to 25 Gbit       0.006       1
@@ -116,4 +114,26 @@ output "ssh" {
     tester = "ssh -i ~/.ssh/key.pem ubuntu@${aws_instance.tester.public_ip}"
     db     = "ssh -i ~/.ssh/key.pem ubuntu@${aws_instance.db.public_ip}"
   }
+}
+
+# Ready to paste for ssh config
+output "ssh_config" {
+  value = <<-EOT
+    Add these to your ~/.ssh/config to ssh with just "ssh server", "ssh database" and "ssh tester":
+
+    Host server
+      HostName ${aws_instance.server.public_ip}
+      User ubuntu
+      IdentityFile ~/.ssh/${local.key}.pem
+
+    Host database
+      HostName ${aws_instance.db.public_ip}
+      User ubuntu
+      IdentityFile ~/.ssh/${local.key}.pem
+
+    Host tester
+      HostName ${aws_instance.tester.public_ip}
+      User ubuntu
+      IdentityFile ~/.ssh/${local.key}.pem
+  EOT
 }

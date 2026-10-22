@@ -136,7 +136,7 @@ export default (({
             icon="fa-solid fa-chart-simple"
             tooltipText="View Stats"
             onClick={() => {
-              openModal("linkStats", { urlId });
+              openModal("linkStats", { urlId, shortenedUrl });
             }}
             onMouseLeave={() => {}}
           />

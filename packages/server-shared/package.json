@@ -2,5 +2,8 @@
   "name": "@weer/server-shared",
   "version": "1.0.0",
   "description": "Files both servers share: .env, env.sh, the SQL tables, the email templates and the public folder",
-  "private": true
+  "private": true,
+  "scripts": {
+    "geo": "./geo/update.sh"
+  }
 }
