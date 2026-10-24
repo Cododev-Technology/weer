@@ -27,10 +27,8 @@ import {
   validateAffixCode,
 } from "../lib/links.js";
 
-const publicPath = new URL(
-  "../../../server-shared/public",
-  import.meta.url
-).pathname;
+const publicPath = new URL("../../../server-shared/public", import.meta.url)
+  .pathname;
 
 // Helper functions to check affix code availability
 const isAffixAvailable = async (code: string, userId: string) => {
@@ -208,7 +206,10 @@ const shorten = async (req: Request<API.Url.ShortenBody>, res: Response) => {
 };
 
 // Change the type of a url (e.g. from classic to custom). User can do this from the customization modal
-const changeUrlType = async (req: Request<API.Url.ChangeTypeBody>, res: Response) => {
+const changeUrlType = async (
+  req: Request<API.Url.ChangeTypeBody>,
+  res: Response
+) => {
   const id = Number(req.params?.id);
   const newType = req.body?.type as LinkType;
 
@@ -474,7 +475,6 @@ async function resolveUrlRecord(
   }
 }
 
-/** @TODO FIX ERROR RETURN IN CPEAK SEND FILE */
 // Redirect to the real url
 const redirect = async (req: Request, res: Response) => {
   res.setHeader("X-Robots-Tag", "noindex");
@@ -531,7 +531,10 @@ const redirect = async (req: Request, res: Response) => {
   } else {
     // We have this in case we want to run the server without Redis, but it should not be the default in production because it can cause performance issues.
     // (the hash is stored as its 32 bytes, see views.sql)
-    await DB.insert<IView>("views", { ...viewData, visitor_hash: Buffer.from(visitorHash, "hex") });
+    await DB.insert<IView>("views", {
+      ...viewData,
+      visitor_hash: Buffer.from(visitorHash, "hex"),
+    });
   }
 
   // REDIRECT_WARNING=false skips the warning page for every link (for the load tests)
@@ -668,7 +671,10 @@ const checkCustomAvailability = async (req: Request, res: Response) => {
 };
 
 // Update the destination URL of an existing shortened link
-const updateRealUrl = async (req: Request<API.Url.UpdateRealUrlBody>, res: Response) => {
+const updateRealUrl = async (
+  req: Request<API.Url.UpdateRealUrlBody>,
+  res: Response
+) => {
   const id = Number(req.params?.id);
   const newRealUrl = req.body?.url;
 
