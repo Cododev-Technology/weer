@@ -27,6 +27,24 @@ function setTokenCookie(res: Response, token: string) {
   });
 }
 
+// Migrates any urls created during an anonymous session to the now-authenticated user account
+async function claimAnonymousSession(req: Request, userId: number): Promise<void> {
+  const sessionToken = req.signedCookies?.session_token || null;
+  if (!sessionToken) return;
+
+  const session = await DB.find<ISession>(
+    `SELECT id FROM sessions WHERE session_token = $1`,
+    [sessionToken]
+  );
+
+  if (session) {
+    await DB.query(
+      `UPDATE urls SET user_id = $1, session_id = NULL WHERE session_id = $2`,
+      [userId, session.id]
+    );
+  }
+}
+
 const handleOAuthCallback = async (req: Request, res: Response) => {
   const code = req.query?.code as string;
   if (!code) return res.redirect("/");
@@ -66,22 +84,7 @@ const handleOAuthCallback = async (req: Request, res: Response) => {
 
   const userId = dbUser.id;
 
-  // ---- Migrate any urls created during the anonymous session to the user account ---- //
-  const sessionToken = req.signedCookies?.session_token || null;
-
-  if (sessionToken) {
-    const session = await DB.find<ISession>(
-      `SELECT id FROM sessions WHERE session_token = $1`,
-      [sessionToken]
-    );
-
-    if (session) {
-      await DB.query(
-        `UPDATE urls SET user_id = $1, session_id = NULL WHERE session_id = $2`,
-        [userId, session.id]
-      );
-    }
-  }
+  await claimAnonymousSession(req, userId);
 
   res.cookie("uid", String(userId), {
     signed: true,
@@ -338,6 +341,8 @@ const register = async (req: Request<API.Auth.RegisterBody>, res: Response) => {
     throw e;
   }
 
+  await claimAnonymousSession(req, user.id);
+
   const token = await req.login({
     password: password!,
     hashedPassword: hash,
@@ -387,6 +392,8 @@ const logIn = async (req: Request<API.Auth.LoginBody>, res: Response) => {
   });
 
   if (!token) throw { status: 401, message: "Incorrect email or password." };
+
+  await claimAnonymousSession(req, user.id);
 
   setTokenCookie(res, token);
 
