@@ -35,6 +35,31 @@ fn set_token_cookie(res: &mut CpeakResponse, token: &str) {
     );
 }
 
+// Migrates any urls created during an anonymous session to the now-authenticated user account
+async fn claim_anonymous_session(req: &CpeakRequest, user_id: i32) -> Result<(), CpeakError> {
+    let Some(session_token) = session_token(req) else {
+        return Ok(());
+    };
+
+    // ($1::bpchar: session_token is a CHAR column, and sqlx sends a String as text.
+    // PostgreSQL can only use the index of the column for a value of its own type.)
+    let session =
+        sqlx::query_as::<_, ISession>("SELECT id FROM sessions WHERE session_token = $1::bpchar")
+            .bind(session_token)
+            .fetch_optional(&*POOL)
+            .await?;
+
+    if let Some(session) = session {
+        sqlx::query("UPDATE urls SET user_id = $1, session_id = NULL WHERE session_id = $2")
+            .bind(user_id)
+            .bind(session.id)
+            .execute(&*POOL)
+            .await?;
+    }
+
+    Ok(())
+}
+
 pub async fn handle_oauth_callback(
     req: &mut CpeakRequest,
     res: &mut CpeakResponse,
@@ -90,27 +115,7 @@ pub async fn handle_oauth_callback(
 
     let user_id = db_user.id;
 
-    // ---- Migrate any urls created during the anonymous session to the user account ---- //
-    let session_token = session_token(req);
-
-    if let Some(session_token) = session_token {
-        // ($1::bpchar: session_token is a CHAR column, and sqlx sends a String as text.
-        // PostgreSQL can only use the index of the column for a value of its own type.)
-        let session = sqlx::query_as::<_, ISession>(
-            "SELECT id FROM sessions WHERE session_token = $1::bpchar",
-        )
-        .bind(session_token)
-        .fetch_optional(&*POOL)
-        .await?;
-
-        if let Some(session) = session {
-            sqlx::query("UPDATE urls SET user_id = $1, session_id = NULL WHERE session_id = $2")
-                .bind(user_id)
-                .bind(session.id)
-                .execute(&*POOL)
-                .await?;
-        }
-    }
+    claim_anonymous_session(req, user_id).await?;
 
     res.cookie(
         "uid",
@@ -431,6 +436,8 @@ pub async fn register(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result
         }
     };
 
+    claim_anonymous_session(req, user.id).await?;
+
     let token = req.login(&password, &hash, &user.id.to_string()).await?;
 
     let Some(token) = token else {
@@ -491,6 +498,8 @@ pub async fn log_in(req: &mut CpeakRequest, res: &mut CpeakResponse) -> Result<(
     let Some(token) = token else {
         return Err(CpeakError::new(401, "Incorrect email or password."));
     };
+
+    claim_anonymous_session(req, user.id).await?;
 
     set_token_cookie(res, &token);
 

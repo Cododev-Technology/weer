@@ -41,7 +41,7 @@ export const UrlProvider: React.FC<{ children: React.ReactNode }> = ({
   const [domain, setDomain] = useState<string | null>(null);
   const [loading, setLoading] = useState(true); // for fetching URLs
   const [justCreatedUrlId, setJustCreatedUrlId] = useState<string | null>(null);
-  const { refreshAuth } = useAuth();
+  const { refreshAuth, isSignedIn } = useAuth();
 
   // Centralized fetch function
   const fetchUrls = async () => {
@@ -93,8 +93,8 @@ export const UrlProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   useEffect(() => {
-    fetchUrls();
-  }, []);
+    if (isSignedIn !== null) fetchUrls();
+  }, [isSignedIn]);
 
   const addUrl = (newUrl: IUrl) => {
     setUrls((prevUrls) => [...prevUrls, newUrl]);
