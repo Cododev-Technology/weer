@@ -9,7 +9,7 @@ use std::net::IpAddr;
 use std::sync::LazyLock;
 use std::time::Duration;
 
-use cpeak::CpeakError;
+use cpeak::{Cpeak, CpeakError, CpeakOptions};
 use redis::cluster_async::ClusterConnection;
 use sqlx::postgres::PgPoolCopyExt;
 
@@ -24,8 +24,10 @@ type StreamEntries = Vec<(String, Vec<String>)>;
 type Streams = Option<Vec<(String, StreamEntries)>>;
 
 fn main() {
-    // Set node process name to node-janitor for easier identification in logs and process managers
-    // (a Rust program can't rename itself like that: it is called janitor, after this file)
+    let _ = Cpeak::new(CpeakOptions {
+          background_threads: Some(8), // now janitor's thread pool has 8 threads
+          ..Default::default()
+      });
 
     // Rust has no top-level await, so the janitor runs in cpeak::run()
     cpeak::run(janitor());

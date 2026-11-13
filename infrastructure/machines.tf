@@ -47,8 +47,8 @@ resource "aws_instance" "db" {
   root_block_device {
     volume_size = 500 # GB: a minute of 1M req/s adds about 8 GB of views (133 bytes each; 16 GB with real browser rows), plus up to 16 GB of WAL and Ubuntu. About an hour of 1M
     volume_type = "gp3"
-    iops        = 8000 # it did up to 4,700 writes/s; at least 4 per MB/s of throughput. 30 minutes: the same
-    throughput  = 1000 # MB/s: 320-540 MB/s at 1M (820 with real browser rows). 30 minutes: the same
+    iops        = 8000 # it did up to 4,700 writes/s; at least 4 per MB/s of throughput
+    throughput  = 1000 # MB/s: 320-540 MB/s at 1M (820 with real browser rows)
   }
 }
 
@@ -94,7 +94,8 @@ resource "aws_instance" "tester" {
   }
 
   root_block_device {
-    volume_size = 8 # GB: the tester writes almost nothing. 30 minutes: the same
+    volume_size = 8 # GB: the tester writes almost nothing
+    volume_type = "gp3"
   }
 }
 
