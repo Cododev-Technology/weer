@@ -67,10 +67,10 @@ fn next_shard() -> u32 {
     })
 }
 
-// Cap the length of each stream. It leaves room for the views the janitor is behind on: 6.25M
-// per stream, so 300M over all 48 streams, which is 5 minutes at 1M views/s (121 bytes a view,
-// so about 36 GB of Redis). Past that, the oldest views are dropped, saved or not.
-const MAX_LEN: u32 = 6_250_000;
+// Cap the length of each stream. It leaves room for the views the janitor is behind on: 12M
+// per stream, so 576M over all 48 streams, which is 10 minutes at 1M views/s (121 bytes a view,
+// so about 70 GB of Redis). Past that, the oldest views are dropped, saved or not.
+const MAX_LEN: u32 = 12_000_000;
 
 pub fn push(event: IViewEvent) {
     let fields: Vec<String> = vec![

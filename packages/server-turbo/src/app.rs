@@ -1,5 +1,5 @@
 use std::sync::LazyLock;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use chrono::{DateTime, Utc};
 use cpeak::{
@@ -39,6 +39,8 @@ pub fn app() -> Cpeak {
             errors: LogOutput::File(
                 concat!(env!("CARGO_MANIFEST_DIR"), "/logs/{day}/errors.log").to_string(),
             ),
+            buffer_size: 4 * 1024 * 1024, // 4 MB
+            flush_every: Duration::from_secs(2), // 2 seconds
             ..Default::default()
         }),
         ..Default::default()

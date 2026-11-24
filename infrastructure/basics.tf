@@ -2,7 +2,7 @@
 #
 #   terraform init      once
 #   terraform apply     start the 3 machines and print their addresses
-#   terraform destroy   stop paying for them
+#   terraform destroy   destroy everything launched
 #
 # Each machine sets itself up when it boots (setup/basic.sh, then its own script), which takes a
 # few minutes. ssh in and run "cloud-init status --wait" to know when it's done.
